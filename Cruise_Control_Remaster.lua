@@ -146,7 +146,7 @@ function imgui.OnDrawFrame()
 			end
             imgui.SameLine(260)
             if imgui.Button("Update Script", imgui.ImVec2(240, 40)) then
-				update_script()
+				update_script(false, false)
 			end
 		    imgui.PopFont()
 		    buttonend()
