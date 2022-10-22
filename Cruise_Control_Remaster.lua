@@ -7,6 +7,7 @@ local script_version_text = '6.5'
 require "moonloader"
 require "sampfuncs"
 local https = require 'ssl.https'
+local dlstatus = require('moonloader').download_status
 local script_path = thisScript().path
 local script_url = "https://raw.githubusercontent.com/Visaging/Cruise-Control-Remaster/main/Cruise_Control_Remaster.lua"
 local update_url = "https://raw.githubusercontent.com/Visaging/Cruise-Control-Remaster/main/Cruise_Control_Remaster.txt"
