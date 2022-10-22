@@ -8,8 +8,8 @@ require "moonloader"
 require "sampfuncs"
 local effil_res, effil = pcall(require, 'effil')
 local script_path = thisScript().path
-local script_url = "https://raw.githubusercontent.com/Visaging/chatcolor/main/ChatColorChanger.lua"
-local update_url = "https://raw.githubusercontent.com/Visaging/chatcolor/main/ChatColorChanger.txt"
+local script_url = "https://raw.githubusercontent.com/Visaging/Cruise-Control-Remaster/main/Cruise_Control_Remaster.lua"
+local update_url = "https://raw.githubusercontent.com/Visaging/Cruise-Control-Remaster/main/Cruise_Control_Remaster.txt"
 local imgui = require 'imgui'
 local inicfg = require 'inicfg'
 local vk = require 'vkeys'
