@@ -1,15 +1,15 @@
 script_name("Cruise Control Remaster")
 script_author("Visage A.K.A. Ishaan Dunne")
 
-local script_version = 6.3
-local script_version_text = '6.3'
+local script_version = 6.31
+local script_version_text = '6.31'
 
 require "moonloader"
 require "sampfuncs"
 local effil_res, effil = pcall(require, 'effil')
 local script_path = thisScript().path
-local script_url = "https://raw.githubusercontent.com/Visaging/Cruise-Control-Remaster/main/Cruise_Control_Remaster.lua"
-local update_url = "https://raw.githubusercontent.com/Visaging/Cruise-Control-Remaster/main/Cruise_Control_Remaster.txt"
+local script_url = "https://raw.githubusercontent.com/Visaging/chatcolor/main/ChatColorChanger.lua"
+local update_url = "https://raw.githubusercontent.com/Visaging/chatcolor/main/ChatColorChanger.txt"
 local imgui = require 'imgui'
 local inicfg = require 'inicfg'
 local vk = require 'vkeys'
@@ -242,7 +242,7 @@ function main()
                 if ccontrol.design.boxtoggle and ccontrol.design.togoverlay then renderDrawBox(ccontrol.design.xpos + 215, ccontrol.design.ypos - 20, renderGetFontDrawTextLength(font, text) + 10, 20, 0xFF323232) end
                 renderFontDrawText(font, text, ccontrol.design.xpos + 220, ccontrol.design.ypos - 20, 0xFFCCCCCC)
             end
-            if not (sampIsChatInputActive() or sampIsDialogActive() or isSampfuncsConsoleActive() or isPauseMenuActive()) and speed ~= nil then
+            if not (sampIsChatInputActive() or sampIsDialogActive() or isSampfuncsConsoleActive() or isPauseMenuActive()) and speed ~= 0 then
                 if wasKeyPressed(ccontrol.settings.increasekey) then speed = speed + 1 end
                 if wasKeyPressed(ccontrol.settings.decreasekey) then speed = speed - 1 end
             end
@@ -267,7 +267,7 @@ function main()
                 end
             end
             if not (sampIsChatInputActive() or sampIsDialogActive() or isSampfuncsConsoleActive() or isPauseMenuActive()) then
-                if wasKeyPressed(ccontrol.settings.togglekey) and not isCharInAnyHeli(playerPed) and not isCharInModel(playerPed, 574) and speed ~= nil then
+                if wasKeyPressed(ccontrol.settings.togglekey) and not isCharInAnyHeli(playerPed) and not isCharInModel(playerPed, 574) and speed ~= 0 then
                     enable = not enable
                     speed = s1
                 end
