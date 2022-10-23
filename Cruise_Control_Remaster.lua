@@ -1,8 +1,8 @@
 script_name("Cruise Control Remaster")
 script_author("Visage A.K.A. Ishaan Dunne")
 
-local script_version = 6.5
-local script_version_text = '6.5'
+local script_version = 6.6
+local script_version_text = '6.6'
 
 require "moonloader"
 require "sampfuncs"
@@ -478,10 +478,10 @@ function update_script(noupdatecheck)
 		update_version = update_text:match("version: (.+)")
 		if update_version ~= nil then
 			if tonumber(update_version) > script_version then
-				sampAddChatMessage(string.format("{ABB2B9}[%s]{FFFFFF} New version found! The update is in progress..", script.this.name), -1)
+				sampAddChatMessage(string.format("{DFBD68}[%s]{FFFFFF} New version found! The update is in progress.", script.this.name), 10944256)
 				downloadUrlToFile(script_url, script_path, function(id, status)
 					if status == dlstatus.STATUS_ENDDOWNLOADDATA then
-						sampAddChatMessage(string.format("{ABB2B9}[%s]{FFFFFF} The update was successful!", script.this.name), -1)
+						sampAddChatMessage(string.format("{DFBD68}[%s]{FFFFFF} The update was successful!", script.this.name), 10944256)
 						lua_thread.create(function()
 							wait(500) 
 							thisScript():reload()
@@ -490,7 +490,7 @@ function update_script(noupdatecheck)
 				end)
 			else
 				if noupdatecheck then
-					sampAddChatMessage(string.format("{ABB2B9}[%s]{FFFFFF} No new version found..", script.this.name), -1)
+					sampAddChatMessage(string.format("{DFBD68}[%s]{FFFFFF} No new version found.", script.this.name), 10944256)
 				end
 			end
 		end
