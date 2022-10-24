@@ -1,8 +1,8 @@
 script_name("Cruise Control Remaster")
 script_author("Visage A.K.A. Ishaan Dunne")
 
-local script_version = 6.6
-local script_version_text = '6.6'
+local script_version = 6.7
+local script_version_text = '6.7'
 
 require "moonloader"
 require "sampfuncs"
