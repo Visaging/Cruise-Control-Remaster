@@ -1,8 +1,8 @@
 script_name("Cruise Control Remaster")
 script_author("Visage A.K.A. Ishaan Dunne")
 
-local script_version = 6.71
-local script_version_text = '6.71'
+local script_version = 6.72
+local script_version_text = '6.72'
 
 require "moonloader"
 require "sampfuncs"
@@ -41,7 +41,7 @@ local ccontrol = inicfg.load({
         boxtoggle = false,
         togoverlay = true,
         autosave = true,
-        autoupdate = false,
+        autoupdate = true,
     }
 }, 'cruise_control.ini')
 
@@ -202,9 +202,9 @@ function main()
             update_script(false)
     end
     sampAddChatMessage("{DFBD68}Cruise Control Remaster by {FFFF00}Visage. {FF0000}[/ccontrol] {FFFFFF}to change cruise and hover keys.", 10944256)
-    sampRegisterChatCommand("ccversion", function()
+    sampRegisterChatCommand("ccrversion", function()
             lua_thread.create(function()
-                    sampAddChatMessage(string.format("{DFBD68}[%s]{FFFFFF} Current version: {00b7ff}[%s]{FFFFFF}. Use {00b7ff}[/ccupdate]{FFFFFF} to check for updates.", script.this.name, script_version_text), 10944256)
+                    sampAddChatMessage(string.format("{DFBD68}[%s]{FFFFFF} Current version: {00b7ff}[%s]{FFFFFF}. Click on 'Update Script' in menu to check for updates.", script.this.name, script_version_text), 10944256)
 		end)
 	end)
     sampRegisterChatCommand("ccontrol", function() main_window_state.v = not main_window_state.v end)
