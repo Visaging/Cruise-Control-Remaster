@@ -1,8 +1,8 @@
 script_name("Cruise Control Remaster")
 script_author("Visage A.K.A. Ishaan Dunne")
 
-local script_version = 6.7
-local script_version_text = '6.7'
+local script_version = 6.71
+local script_version_text = '6.71'
 
 require "moonloader"
 require "sampfuncs"
@@ -202,6 +202,11 @@ function main()
             update_script(false)
     end
     sampAddChatMessage("{DFBD68}Cruise Control Remaster by {FFFF00}Visage. {FF0000}[/ccontrol] {FFFFFF}to change cruise and hover keys.", 10944256)
+    sampRegisterChatCommand("ccversion", function()
+            lua_thread.create(function()
+                    sampAddChatMessage(string.format("{DFBD68}[%s]{FFFFFF} Current version: {00b7ff}[%s]{FFFFFF}. Use {00b7ff}[/ccupdate]{FFFFFF} to check for updates.", script.this.name, script_version_text), 10944256)
+		end)
+	end)
     sampRegisterChatCommand("ccontrol", function() main_window_state.v = not main_window_state.v end)
     applyfont()
     while true do
