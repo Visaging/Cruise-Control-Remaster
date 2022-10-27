@@ -1,8 +1,8 @@
 script_name("Cruise Control Remaster")
 script_author("Visage A.K.A. Ishaan Dunne")
 
-local script_version = 6.72
-local script_version_text = '6.72'
+local script_version = 6.73
+local script_version_text = '6.73'
 
 require "moonloader"
 require "sampfuncs"
@@ -11,6 +11,7 @@ local dlstatus = require('moonloader').download_status
 local script_path = thisScript().path
 local script_url = "https://raw.githubusercontent.com/Visaging/Cruise-Control-Remaster/main/Cruise_Control_Remaster.lua"
 local update_url = "https://raw.githubusercontent.com/Visaging/Cruise-Control-Remaster/main/Cruise_Control_Remaster.txt"
+local imgui = require 'imgui'
 local imgui = require 'imgui'
 local inicfg = require 'inicfg'
 local vk = require 'vkeys'
@@ -246,7 +247,7 @@ function main()
                 if ccontrol.design.boxtoggle and ccontrol.design.togoverlay then renderDrawBox(ccontrol.design.xpos + 215, ccontrol.design.ypos - 20, renderGetFontDrawTextLength(font, text) + 10, 20, 0xFF323232) end
                 renderFontDrawText(font, text, ccontrol.design.xpos + 220, ccontrol.design.ypos - 20, 0xFFCCCCCC)
             end
-            if not (sampIsChatInputActive() or sampIsDialogActive() or isSampfuncsConsoleActive() or isPauseMenuActive()) and speed ~= 0 then
+            if not (sampIsChatInputActive() or sampIsDialogActive() or isSampfuncsConsoleActive() or isPauseMenuActive()) and enable then
                 if wasKeyPressed(ccontrol.settings.increasekey) then speed = speed + 1 end
                 if wasKeyPressed(ccontrol.settings.decreasekey) then speed = speed - 1 end
             end
@@ -254,7 +255,7 @@ function main()
                 if getCarSpeed(storeCarCharIsInNoSave(playerPed)) < speed then
                     setGameKeyState(16, 150)
                 elseif getCarSpeed(storeCarCharIsInNoSave(playerPed)) > speed + 0.6666666666666667 then
-                    setGameKeyState(16, -80)
+                    setGameKeyState(14, 80)
                 end
                 if not (sampIsChatInputActive() or sampIsDialogActive() or isSampfuncsConsoleActive() or isPauseMenuActive()) then
                     if isKeyDown(87) or isKeyDown(83) or s1 < 1 then
