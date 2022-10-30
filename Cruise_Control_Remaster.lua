@@ -1,8 +1,8 @@
 script_name("Cruise Control Remaster")
 script_author("Visage A.K.A. Ishaan Dunne")
 
-local script_version = 6.73
-local script_version_text = '6.73'
+local script_version = 6.74
+local script_version_text = '6.74'
 
 require "moonloader"
 require "sampfuncs"
@@ -272,7 +272,7 @@ function main()
                 end
             end
             if not (sampIsChatInputActive() or sampIsDialogActive() or isSampfuncsConsoleActive() or isPauseMenuActive()) then
-                if wasKeyPressed(ccontrol.settings.togglekey) and not isCharInAnyHeli(playerPed) and not isCharInModel(playerPed, 574) and speed ~= 0 then
+                if wasKeyPressed(ccontrol.settings.togglekey) and not isCharInAnyHeli(playerPed) and not isCharInModel(playerPed, 574) and s1 ~= 0 then
                     enable = not enable
                     speed = s1
                 end
