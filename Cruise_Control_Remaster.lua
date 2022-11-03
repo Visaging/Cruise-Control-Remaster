@@ -1,8 +1,8 @@
 script_name("Cruise Control Remaster")
 script_author("Visage A.K.A. Ishaan Dunne")
 
-local script_version = 6.74
-local script_version_text = '6.74'
+local script_version = 6.75
+local script_version_text = '6.75'
 
 require "moonloader"
 require "sampfuncs"
@@ -21,8 +21,10 @@ u8 = encoding.UTF8
 
 local enable = false
 local hover = false
+local mousepos = false
 local font1 = nil
 local window2img = 0
+local fpos = {}
 
 local ccontrol = inicfg.load({
     settings = 
@@ -34,8 +36,8 @@ local ccontrol = inicfg.load({
     },
     design =
     {
-        xpos = 1355,
-        ypos = 1080,
+        xpos = 296,
+        ypos = 202,
         fontsize = 10,
         font = "Arial",
         boxtoggle = false,
@@ -56,18 +58,18 @@ local ctogkey = false
 local cikey = false
 local cdkey = false
 local chk = false
-local posx = imgui.ImInt(ccontrol.design.xpos)
-local posy = imgui.ImInt(ccontrol.design.ypos)
 local fntsize = imgui.ImInt(ccontrol.design.fontsize)
 function imgui.OnDrawFrame()
   if main_window_state.v then
 		width, height = getScreenResolution()
 		imgui.SetNextWindowPos(imgui.ImVec2(width / 2, height / 2), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
 		imgui.SetNextWindowSize(imgui.ImVec2(510, 230), imgui.Cond.FirstUseEver)
-		imgui.Begin(u8"Cruise Control Settings", main_window_state, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoScrollbar + imgui.WindowFlags.NoResize)
+		imgui.Begin(u8"Cruise Control Settings", main_window_state, imgui.WindowFlags.NoResize)
+
+        local px = imgui.ImFloat2(ccontrol.design.xpos, ccontrol.design.ypos)
         imgui.PushStyleVar(imgui.StyleVar.ItemSpacing, imgui.ImVec2(1, 5)) buttonset() imgui.PushFont(fontsize20)
-        imgui.SameLine(130)
-        if imgui.Button(u8'Cruise Key Settings') then window2img = 0 end
+        imgui.SameLine(173)
+        if imgui.Button(u8'Key Settings') then window2img = 0 end
         imgui.SameLine(260)
         if imgui.Button(u8'Overlay Settings') then window2img = 1 end
         imgui.PopFont() buttonend() imgui.PopStyleVar()
@@ -154,24 +156,30 @@ function imgui.OnDrawFrame()
 		    buttonend()
 		    imgui.PopStyleVar()
         else
-            imgui.NewLine() imgui.NewLine()
-            imgui.SameLine(190)
             if imgui.Checkbox(u8("Toggle Overlay"), imgui.ImBool(ccontrol.design.togoverlay)) then
                 ccontrol.design.togoverlay = not ccontrol.design.togoverlay
             end
 
-            imgui.Text("Left/Right: ") imgui.SameLine(135) imgui.PushItemWidth(100)
-            if imgui.DragInt("##xpos", posx) then ccontrol.design.xpos = posx.v end
-            imgui.SameLine(300)
-            imgui.Text("Up/Down: ") imgui.PushItemWidth(100) imgui.SameLine()
-            if imgui.DragInt("##ypos", posy) then ccontrol.design.ypos = posy.v end
+            imgui.PushItemWidth(200)
+            if imgui.DragFloat2('Left/Right | Up/Down ', px, 0.1, -2000.0, 2000.0) then 
+                ccontrol.design.xpos = px.v[1] 
+                ccontrol.design.ypos = px.v[2] 
+            end
+            
+            imgui.SameLine()
+            if imgui.Button(mousepos and u8'Cancel' or u8'Move with mouse', imgui.ImVec2(130, 20)) then
+                mousepos = not mousepos
+                if mousepos then
+                    sampAddChatMessage('Press {FF0000}'..vk.id_to_name(vk.VK_LBUTTON)..' {FFFFFF}to save the position.', -1)
+                end
+            end
 
             fnt = imgui.ImBuffer(30)
             fnt.v = ccontrol.design.font
-            imgui.Text("Font: ") imgui.SameLine(135) imgui.PushItemWidth(100)
+            imgui.Text("Font: ") imgui.SameLine() imgui.PushItemWidth(180)
             if imgui.InputText("##font", fnt, imgui.InputTextFlags.EnterReturnsTrue) then ccontrol.design.font = fnt.v applyfont() end
-            imgui.SameLine(300)
-            imgui.Text("Font Size: ") imgui.SameLine() imgui.PushItemWidth(100)
+            imgui.SameLine(250)
+            imgui.Text("Font Size: ") imgui.SameLine() imgui.PushItemWidth(180)
             if imgui.DragInt("##fontsize", fntsize, imgui.InputTextFlags.EnterReturnsTrue) then ccontrol.design.fontsize = fntsize.v applyfont() end
 
             imgui.NewLine() imgui.NewLine()
@@ -188,7 +196,6 @@ function imgui.OnDrawFrame()
             if imgui.Checkbox(u8("Auto Update Script"), imgui.ImBool(ccontrol.design.autoupdate)) then
                 ccontrol.design.autoupdate = not ccontrol.design.autoupdate
             end
-            if ccontrol.design.autosave then inicfg.save(ccontrol, 'cruise_control.ini') end
         end
         imgui.PopFont() imgui.PopStyleVar()
     	imgui.End()
@@ -201,21 +208,34 @@ function main()
     if ccontrol.design.autoupdate then
             update_script(false)
     end
-    sampAddChatMessage("{DFBD68}Cruise Control Remaster by {FFFF00}Visage. {FF0000}[/ccontrol] {FFFFFF}to change cruise and hover keys.", 10944256)
+    sampAddChatMessage("{DFBD68}Cruise Control Remaster by {FFFF00}Visage. {FF0000}[/ccontrol] {FFFFFF}to change keys/settings.", 10944256)
     sampRegisterChatCommand("ccrversion", function()
             lua_thread.create(function()
                     sampAddChatMessage(string.format("{DFBD68}[%s]{FFFFFF} Current version: {00b7ff}[%s]{FFFFFF}. Click on 'Update Script' in menu to check for updates.", script.this.name, script_version_text), 10944256)
 		end)
 	end)
-    sampRegisterChatCommand("ccontrol", function() main_window_state.v = not main_window_state.v end)
+    sampRegisterChatCommand("ccontrol", function() main_window_state.v = not main_window_state.v window2img = 0 end)
     applyfont()
     while true do
         imgui.Process = main_window_state.v
         wait(0)
+        if window2img == 1 then 
+			if mousepos then 
+				if isKeyJustPressed(vk.VK_LBUTTON) then 
+					mousepos = false
+                    local x, y = getCursorPos()
+                    ccontrol.design.xpos = x
+                    ccontrol.design.ypos = y
+				else 
+					fpos[1], fpos[2] = getCursorPos() 
+				end 
+			end 
+		else 
+			if mousepos then mousepos = false end
+		end 
         if isCharInAnyCar(playerPed) then
             local s1 = getCarSpeed(storeCarCharIsInNoSave(playerPed))
             carhandle = storeCarCharIsInNoSave(playerPed)
-            _, carid = sampGetVehicleIdByCarHandle(carhandle)
             ds = getCarDoorLockStatus(carhandle)
             pdriver = getDriverOfCar(carhandle)
             
@@ -229,23 +249,23 @@ function main()
             if pdriver == 1 then
                 if isCharInAnyHeli(playerPed) and not (isPauseMenuActive() or sampIsScoreboardOpen()) then
                     local text = ("Hover Mode: %s {FFCCCCCC}Speed: {FFFFFF00}%.0f {FFCCCCCC}Door Status: %s"):format(hover and "{FF00CC00}ON" or "{FFCC0000}OFF", s1 * 3, doorStatus)
-                    if ccontrol.design.boxtoggle and ccontrol.design.togoverlay then renderDrawBox(ccontrol.design.xpos - 2, ccontrol.design.ypos - 20, renderGetFontDrawTextLength(font, text) + 10, 20, 0xFF323232) end
-                    if ccontrol.design.togoverlay then renderFontDrawText(font, text, ccontrol.design.xpos + 2, ccontrol.design.ypos - 20, 0xFFCCCCCC) end
+                    if ccontrol.design.boxtoggle and ccontrol.design.togoverlay then renderDrawBox(mousepos and fpos[1] - 2 or ccontrol.design.xpos - 2, mousepos and fpos[2] - 20 or ccontrol.design.ypos - 20, renderGetFontDrawTextLength(font, text) + 10, 20, 0xFF323232) end
+                    if ccontrol.design.togoverlay then renderFontDrawText(font, text, mousepos and fpos[1] + 2 or ccontrol.design.xpos + 2, mousepos and fpos[2] - 20 or ccontrol.design.ypos - 20, 0xFFCCCCCC) end
                 elseif isCharInModel(playerPed, 574) and not (isPauseMenuActive() or sampIsScoreboardOpen()) then
                     local text = ("Cruise Control can not be used on this vehicle.")
-                    if ccontrol.design.boxtoggle and ccontrol.design.togoverlay then renderDrawBox(ccontrol.design.xpos - 2, ccontrol.design.ypos - 20, renderGetFontDrawTextLength(font, text) + 10, 20, 0xFF323232) end
-                    if ccontrol.design.togoverlay then renderFontDrawText(font, text, ccontrol.design.xpos + 2, ccontrol.design.ypos - 20, 0xFFCCCCCC) end
+                    if ccontrol.design.boxtoggle and ccontrol.design.togoverlay then renderDrawBox(mousepos and fpos[1] - 2 or ccontrol.design.xpos - 2, mousepos and fpos[2] - 20 or ccontrol.design.ypos - 20, renderGetFontDrawTextLength(font, text) + 10, 20, 0xFF323232) end
+                    if ccontrol.design.togoverlay then renderFontDrawText(font, text, mousepos and fpos[1] + 2 or ccontrol.design.xpos + 2, mousepos and fpos[2] - 20 or ccontrol.design.ypos - 20, 0xFFCCCCCC) end
                 else
                     if not (isPauseMenuActive() or sampIsScoreboardOpen()) then
                     local text = ("Cruise Control: %s {FFCCCCCC}Speed: {FFFFFF00}%.0f {FFCCCCCC}Door Status: %s"):format(enable and "{FF00CC00}ON" or "{FFCC0000}OFF", s1 * 3, doorStatus)
-                    if ccontrol.design.boxtoggle and ccontrol.design.togoverlay then renderDrawBox(ccontrol.design.xpos - 2, ccontrol.design.ypos - 20, renderGetFontDrawTextLength(font, text) + 10, 20, 0xFF323232) end
-                    if ccontrol.design.togoverlay then renderFontDrawText(font, text, ccontrol.design.xpos + 2, ccontrol.design.ypos - 20, 0xFFCCCCCC) end
+                    if ccontrol.design.boxtoggle and ccontrol.design.togoverlay then renderDrawBox(mousepos and fpos[1] - 2 or ccontrol.design.xpos - 2, mousepos and fpos[2] - 20 or ccontrol.design.ypos - 20, renderGetFontDrawTextLength(font, text) + 10, 20, 0xFF323232) end
+                    if ccontrol.design.togoverlay then renderFontDrawText(font, text, mousepos and fpos[1] + 2 or ccontrol.design.xpos + 2, mousepos and fpos[2] - 20 or ccontrol.design.ypos - 20, 0xFFCCCCCC) end
                     end
                 end
             else
                 local text = ("{FFCCCCCC}Door Status: %s"):format(doorStatus)
-                if ccontrol.design.boxtoggle and ccontrol.design.togoverlay then renderDrawBox(ccontrol.design.xpos + 215, ccontrol.design.ypos - 20, renderGetFontDrawTextLength(font, text) + 10, 20, 0xFF323232) end
-                renderFontDrawText(font, text, ccontrol.design.xpos + 220, ccontrol.design.ypos - 20, 0xFFCCCCCC)
+                if ccontrol.design.boxtoggle and ccontrol.design.togoverlay then renderDrawBox(mousepos and fpos[1] + 215 or ccontrol.design.xpos + 215, mousepos and fpos[2] - 20 or ccontrol.design.ypos - 20, renderGetFontDrawTextLength(font, text) + 10, 20, 0xFF323232) end
+                renderFontDrawText(font, text, mousepos and fpos[1] + 220 or ccontrol.design.xpos + 220, mousepos and fpos[2] - 20 or ccontrol.design.ypos - 20, 0xFFCCCCCC)
             end
             if not (sampIsChatInputActive() or sampIsDialogActive() or isSampfuncsConsoleActive() or isPauseMenuActive()) and enable then
                 if wasKeyPressed(ccontrol.settings.increasekey) then speed = speed + 1 end
@@ -294,8 +314,10 @@ end
 
 function onScriptTerminate(scr, quitGame) 
 	if scr == script.this then 
-		showCursor(false) 
+		showCursor(false)
+        if ccontrol.design.autosave then
 		inicfg.save(ccontrol, 'cruise_control.ini')
+        end
 	end
 end
 
@@ -313,7 +335,6 @@ end
 
 function style()
     imgui.SwitchContext()
-    local style = imgui.GetStyle()
     local style = imgui.GetStyle()
     local colors = style.Colors
     local clr = imgui.Col
@@ -337,24 +358,24 @@ function style()
 
     colors[clr.Text]                                = ImVec4(1.00, 1.00, 1.00, 1.00)
     colors[clr.TextDisabled]                        = ImVec4(0.30, 0.30, 0.30, 1.00)
-    colors[clr.WindowBg]                            = ImVec4(0.09, 0.09, 0.09, 1.00)
+    colors[clr.WindowBg]                            = ImVec4(0.06, 0.05, 0.07, 1.00)
     colors[clr.ChildWindowBg]                       = ImVec4(1.00, 1.00, 1.00, 0.00)
     colors[clr.PopupBg]                             = ImVec4(0.05, 0.05, 0.05, 1.00)
     colors[clr.ComboBg]                             = ImVec4(0.00, 0.53, 0.76, 1.00)
-    colors[clr.Border]                              = ImVec4(0.43, 0.43, 0.50, 0.10)
+    colors[clr.Border]                              = ImVec4(0.80, 0.80, 0.83, 0.88)
     colors[clr.BorderShadow]                        = ImVec4(0.00, 0.00, 0.00, 0.00)
-    colors[clr.FrameBg]                             = ImVec4(0.30, 0.30, 0.30, 0.10)
+    colors[clr.FrameBg]                             = ImVec4(0.10, 0.09, 0.12, 1.00)
     colors[clr.FrameBgHovered]                      = ImVec4(0.00, 0.53, 0.76, 0.30)
     colors[clr.FrameBgActive]                       = ImVec4(0.00, 0.53, 0.76, 0.80)
     colors[clr.TitleBg]                				= ImVec4(0.09, 0.09, 0.09, 1.00)
     colors[clr.TitleBgActive]          				= ImVec4(0.09, 0.09, 0.09, 1.00)
-    colors[clr.TitleBgCollapsed]       				= ImVec4(0.09, 0.09, 0.09, 1.00)
+    colors[clr.TitleBgCollapsed]       				= ImVec4(1.00, 0.98, 0.95, 0.75)
 	colors[clr.MenuBarBg]                           = ImVec4(0.10, 0.09, 0.12, 1.00)
     colors[clr.ScrollbarBg]                         = ImVec4(0.02, 0.02, 0.02, 0.53)
     colors[clr.ScrollbarGrab]                       = ImVec4(0.31, 0.31, 0.31, 1.00)
     colors[clr.ScrollbarGrabHovered]                = ImVec4(0.41, 0.41, 0.41, 1.00)
     colors[clr.ScrollbarGrabActive]                 = ImVec4(0.51, 0.51, 0.51, 1.00)
-    colors[clr.CheckMark]                           = ImVec4(0.00, 0.53, 0.76, 1.00)
+    colors[clr.CheckMark]                           = ImVec4(1.00, 0.42, 0.00, 0.53)
     colors[clr.SliderGrab]                          = ImVec4(0.28, 0.28, 0.28, 1.00)
     colors[clr.SliderGrabActive]                    = ImVec4(0.00, 0.53, 0.76, 1.00)
     colors[clr.Button]                              = ImVec4(0.26, 0.26, 0.26, 0.30)
@@ -466,16 +487,6 @@ end
 
 function applyfont()
     font = renderCreateFont(ccontrol.design.font, ccontrol.design.fontsize, 9)
-end
-
-function hasid(tab, val)
-    for index, value in ipairs(tab) do
-        if tonumber(value) == val then
-            return true
-        end
-    end
-
-    return false
 end
 
 function update_script(noupdatecheck)
