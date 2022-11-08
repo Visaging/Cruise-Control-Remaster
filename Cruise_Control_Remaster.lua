@@ -265,7 +265,7 @@ function main()
             else
                 local text = ("{FFCCCCCC}Door Status: %s"):format(doorStatus)
                 if ccontrol.design.boxtoggle and ccontrol.design.togoverlay then renderDrawBox(mousepos and fpos[1] + 215 or ccontrol.design.xpos + 215, mousepos and fpos[2] - 20 or ccontrol.design.ypos - 20, renderGetFontDrawTextLength(font, text) + 10, 20, 0xFF323232) end
-                renderFontDrawText(font, text, mousepos and fpos[1] + 220 or ccontrol.design.xpos + 220, mousepos and fpos[2] - 20 or ccontrol.design.ypos - 20, 0xFFCCCCCC)
+                if ccontrol.design.togoverlay then renderFontDrawText(font, text, mousepos and fpos[1] + 220 or ccontrol.design.xpos + 220, mousepos and fpos[2] - 20 or ccontrol.design.ypos - 20, 0xFFCCCCCC) end
             end
             if not (sampIsChatInputActive() or sampIsDialogActive() or isSampfuncsConsoleActive() or isPauseMenuActive()) and enable then
                 if wasKeyPressed(ccontrol.settings.increasekey) then speed = speed + 1 end
