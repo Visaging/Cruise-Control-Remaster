@@ -184,8 +184,7 @@ function imgui.OnDrawFrame()
                 end
             end
 
-            fnt = imgui.ImBuffer(30)
-            fnt.v = ccontrol.design.font
+            fnt = imgui.ImBuffer(30) fnt.v = ccontrol.design.font
             imgui.Text("Font: ") imgui.SameLine() imgui.PushItemWidth(180)
             if imgui.InputText("##font", fnt, imgui.InputTextFlags.EnterReturnsTrue) then ccontrol.design.font = fnt.v applyfont() end
             imgui.SameLine(250)
