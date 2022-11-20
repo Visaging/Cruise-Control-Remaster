@@ -1,8 +1,8 @@
 script_name("Cruise Control Remaster")
 script_author("Visage A.K.A. Ishaan Dunne")
 
-local script_version = 6.76
-local script_version_text = '6.76'
+local script_version = 6.77
+local script_version_text = '6.77'
 
 require "moonloader"
 require "sampfuncs"
@@ -11,22 +11,14 @@ local dlstatus = require('moonloader').download_status
 local script_path = thisScript().path
 local script_url = "https://raw.githubusercontent.com/Visaging/Cruise-Control-Remaster/main/Cruise_Control_Remaster.lua"
 local update_url = "https://raw.githubusercontent.com/Visaging/Cruise-Control-Remaster/main/Cruise_Control_Remaster.txt"
-local imgui = require 'imgui'
-local imgui = require 'imgui'
+local imgui, ffi = require 'mimgui', require 'ffi'
+local new, str, sizeof = imgui.new, ffi.string, ffi.sizeof
 local inicfg = require 'inicfg'
 local vk = require 'vkeys'
 local encoding = require "encoding"
+local enable, hover, mousepos, mousepos2, windno, fpos, fpos2, _menu, ctogkey, cikey, cdkey, chk = false, false, false, false, 0, {}, {}, false, false, false, false, false
 encoding.default = 'CP1251'
 u8 = encoding.UTF8
-
-local enable = false
-local hover = false
-local mousepos = false
-local mousepos2 = false
-local font1 = nil
-local window2img = 0
-local fpos = {}
-local fpos2 = {}
 
 local ccontrol = inicfg.load({
     settings = 
@@ -49,167 +41,86 @@ local ccontrol = inicfg.load({
         nhtoggle = false,
         autosave = true,
         autoupdate = true,
-    }
+    },
+    boxcolor = {r = 0.55, g = 0.21, b = 1, a = 1},
 }, 'cruise_control.ini')
 
-function imgui.BeforeDrawFrame()
-    if font1 == nil then
-        font1 = imgui.GetIO().Fonts:AddFontFromFileTTF(getFolderPath(0x14) .. '\\trebucbd.ttf', 15.0, nil, imgui.GetIO().Fonts:GetGlyphRangesCyrillic())
-    end
-end
+local preset = {boxcolor = imgui.new.float[4](ccontrol.boxcolor.r, ccontrol.boxcolor.g, ccontrol.boxcolor.b, ccontrol.boxcolor.a)}
 
-local main_window_state = imgui.ImBool(false)
-local ctogkey = false
-local cikey = false
-local cdkey = false
-local chk = false
-local fntsize = imgui.ImInt(ccontrol.design.fontsize)
-function imgui.OnDrawFrame()
-  if main_window_state.v then
-		width, height = getScreenResolution()
-		imgui.SetNextWindowPos(imgui.ImVec2(width / 2, height / 2), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
-		imgui.SetNextWindowSize(imgui.ImVec2(510, 230), imgui.Cond.FirstUseEver)
-		imgui.Begin(u8"Cruise Control Settings", main_window_state, imgui.WindowFlags.NoResize)
+imgui.OnInitialize(function()
+	imgui.GetIO().IniFilename = nil
+    style()
+end)
 
-        imgui.PushStyleVar(imgui.StyleVar.ItemSpacing, imgui.ImVec2(1, 5)) buttonset() imgui.PushFont(fontsize20)
-        imgui.SameLine(173)
-        if imgui.Button(u8'Key Settings') then window2img = 0 end
-        imgui.SameLine(260)
-        if imgui.Button(u8'Overlay Settings') then window2img = 1 end
-        imgui.PopFont() buttonend() imgui.PopStyleVar()
-        imgui.Separator()
-        imgui.PushFont(font1) imgui.CenterTextColoredRGB(string.format("{FFFFFF}%s {FFFFFF}( {9E9EFF}%s {FFFFFF})", thisScript().name, table.concat(thisScript().authors, ", "))) imgui.PopFont()
-        imgui.PushStyleVar(imgui.StyleVar.ItemSpacing, imgui.ImVec2(1, 5)) imgui.PushFont(fontsize20)
+imgui.OnFrame(function() return _menu and not isGamePaused() end,
+function()
+    width, height = getScreenResolution()
+    imgui.SetNextWindowPos(imgui.ImVec2(width / 2, height / 2), imgui.Cond.Always, imgui.ImVec2(0.5, 0.5))
+    imgui.SetNextWindowSize(imgui.ImVec2(500, 330), imgui.Cond.FirstUseEver)
+    imgui.BeginCustomTitle(u8"Cruise Control Remaster", 30, main_win, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoMove + imgui.WindowFlags.NoScrollbar)
 
-        if window2img == 0 then
-		imgui.NewLine()
+        imgui.BeginChild("##1", imgui.ImVec2(130, 100), true)
+            imgui.SetCursorPos(imgui.ImVec2(27, 5))
+            imgui.Text("Main Settings")
+            imgui.Separator()
+            if imgui.Button(u8'Key Settings', imgui.ImVec2(120, 20)) then windno = 0 end
+            if imgui.Button(u8'Overlay Settings', imgui.ImVec2(120, 20)) then windno = 1 end
+        imgui.EndChild()
 
-        imgui.Text("Change Toggle Key: ") imgui.SameLine() imgui.PushItemWidth(100)
-        if imgui.Button(ctogkey and 'Press any key' or vk.id_to_name(ccontrol.settings.togglekey)) then
-			ctogkey = true
-			lua_thread.create(function()
-				while ctogkey do wait(0)
-					local keydown, result = getDownKeys()
-					if result then
-						ccontrol.settings.togglekey = keydown
-						ctogkey = false
-					end
-				end
-			end)
-		end
+        imgui.SetCursorPos(imgui.ImVec2(5, 140))
 
-        imgui.SameLine(270)
-		
-        imgui.Text("Change Hover Key: ") imgui.SameLine() imgui.PushItemWidth(100)
-        if imgui.Button(chk and 'Press any key' or vk.id_to_name(ccontrol.settings.hoverkey)) then
-			chk = true
-			lua_thread.create(function()
-				while chk do wait(0)
-					local keydown, result = getDownKeys()
-					if result then
-						ccontrol.settings.hoverkey = keydown
-						chk = false
-					end
-				end
-			end)
-		end
-        
-        imgui.NewLine()
-        imgui.Text("Change Speed Increase Key: ") imgui.SameLine() imgui.PushItemWidth(100)
-        if imgui.Button(cikey and 'Press any key' or vk.id_to_name(ccontrol.settings.increasekey)) then
-			cikey = true
-			lua_thread.create(function()
-				while cikey do wait(0)
-					local keydown, result = getDownKeys()
-					if result then
-						ccontrol.settings.increasekey = keydown
-						cikey = false
-					end
-				end
-			end)
-		end
-			
-        imgui.SameLine(270)
+        imgui.BeginChild("##2", imgui.ImVec2(130, 185), true)
+            imgui.SetCursorPos(imgui.ImVec2(27, 5))
+            imgui.Text("Script Settings")
+            imgui.Separator()
+            if imgui.Button(u8'Update Script', imgui.ImVec2(120, 20)) then update_script(true) end
+            if imgui.Button(u8'Save Config', imgui.ImVec2(120, 20)) then SaveIni() sampAddChatMessage(string.format("{DFBD68}[%s]{FFFFFF} Config Saved!", script.this.name), -1) end
+            if imgui.Button(u8'Reload Script', imgui.ImVec2(120, 20)) then SaveIni() thisScript():reload() end
+            if imgui.Checkbox("Auto Update", new.bool(ccontrol.design.autoupdate)) then ccontrol.design.autoupdate = not ccontrol.design.autoupdate end
+            if imgui.Checkbox("Auto Save", new.bool(ccontrol.design.autosave)) then ccontrol.design.autosave = not ccontrol.design.autosave end
+        imgui.EndChild()
 
-        imgui.Text("Change Speed Decrease Key: ") imgui.SameLine() imgui.PushItemWidth(100)
-        if imgui.Button(cdkey and 'Press any key' or vk.id_to_name(ccontrol.settings.decreasekey)) then
-			cdkey = true
-			lua_thread.create(function()
-				while cdkey do wait(0)
-					local keydown, result = getDownKeys()
-					if result then
-						ccontrol.settings.decreasekey = keydown
-						cdkey = false
-					end
-				end
-			end)
-		end
+        imgui.SetCursorPos(imgui.ImVec2(140, 35))
 
-			imgui.PushStyleVar(imgui.StyleVar.ItemSpacing, imgui.ImVec2(1, 5)) buttonset() imgui.PushFont(fontsize20)
-            imgui.NewLine() imgui.NewLine()
-			imgui.SameLine(10)
-			if imgui.Button(u8'Save Config', imgui.ImVec2(240, 40)) then
-                inicfg.save(ccontrol, 'cruise_control.ini')
-                sampAddChatMessage("Cruise Control: {00ff51}Config Saved!", 10944256)
-			end
-            imgui.SameLine(260)
-            if imgui.Button("Update Script", imgui.ImVec2(240, 40)) then
-				update_script(true)
-			end
-		    imgui.PopFont()
-		    buttonend()
-		    imgui.PopStyleVar()
-        else
-            if imgui.Checkbox(u8("Toggle Primary Overlay"), imgui.ImBool(ccontrol.design.togoverlay)) then
-                ccontrol.design.togoverlay = not ccontrol.design.togoverlay
-            end
-            imgui.SameLine(nil, 10)
-            if imgui.Checkbox(u8("Toggle Secondary Overlay"), imgui.ImBool(ccontrol.design.nhtoggle)) then
-                ccontrol.design.nhtoggle = not ccontrol.design.nhtoggle
-            end
+        imgui.BeginChild("##3", imgui.ImVec2(355, 290), true)
+            if windno == 0 then
+                imgui.Text("Change Toggle Key: ") imgui.SameLine() imgui.PushItemWidth(100)
+                if imgui.Button(ctogkey and 'Press any key' or vk.id_to_name(ccontrol.settings.togglekey)) then ctogkey = true lua_thread.create(function() while ctogkey do wait(0) local keydown, result = getDownKeys() if result then ccontrol.settings.togglekey = keydown ctogkey = false end end end) end
+                
+                imgui.Text("Change Hover Key: ") imgui.SameLine() imgui.PushItemWidth(100)
+                if imgui.Button(chk and 'Press any key' or vk.id_to_name(ccontrol.settings.hoverkey)) then chk = true lua_thread.create(function() while chk do wait(0) local keydown, result = getDownKeys() if result then ccontrol.settings.hoverkey = keydown chk = false end end end) end
+                
+                imgui.Text("Change Speed Increase Key: ") imgui.SameLine() imgui.PushItemWidth(100)
+                if imgui.Button(cikey and 'Press any key' or vk.id_to_name(ccontrol.settings.increasekey)) then cikey = true lua_thread.create(function() while cikey do wait(0) local keydown, result = getDownKeys() if result then ccontrol.settings.increasekey = keydown cikey = false end end end) end
 
-            imgui.Text("Primary Overlay: ") imgui.SameLine()
-            if imgui.Button(mousepos and u8'Cancel##1' or u8'Move with mouse##1', imgui.ImVec2(130, 20)) then
-                mousepos = not mousepos
-                if mousepos then
-                    sampAddChatMessage('Press {FF0000}'..vk.id_to_name(vk.VK_LBUTTON)..' {FFFFFF}to save the position.', -1)
+                imgui.Text("Change Speed Decrease Key: ") imgui.SameLine() imgui.PushItemWidth(100)
+                if imgui.Button(cdkey and 'Press any key' or vk.id_to_name(ccontrol.settings.decreasekey)) then cdkey = true lua_thread.create(function() while cdkey do wait(0) local keydown, result = getDownKeys() if result then ccontrol.settings.decreasekey = keydown cdkey = false end end end) end
+
+            elseif windno == 1 then
+                    if imgui.Checkbox(u8("Toggle Primary Overlay"), new.bool(ccontrol.design.togoverlay)) then ccontrol.design.togoverlay = not ccontrol.design.togoverlay end imgui.SameLine(nil, 20)
+
+                    if imgui.Checkbox(u8("Toggle Secondary Overlay"), new.bool(ccontrol.design.nhtoggle)) then ccontrol.design.nhtoggle = not ccontrol.design.nhtoggle end imgui.NewLine()
+                    
+                    imgui.Text("Primary Overlay: ") imgui.SameLine() 
+                    if imgui.Button(mousepos and u8'Cancel##1' or u8'Move with mouse##1', imgui.ImVec2(130, 20)) then mousepos = not mousepos if mousepos then sampAddChatMessage('Press {FF0000}'..vk.id_to_name(vk.VK_LBUTTON)..' {FFFFFF}to save the position.', -1) end end
+
+                    imgui.Text("Secondary Overlay: ") imgui.SameLine()
+                    if imgui.Button(mousepos2 and u8'Cancel##2' or u8'Move with mouse##2', imgui.ImVec2(130, 20)) then mousepos2 = not mousepos2 if mousepos2 then sampAddChatMessage('Press {FF0000}'..vk.id_to_name(vk.VK_LBUTTON)..' {FFFFFF}to save the position.', -1) end end
+
+                    fnt = new.char[256](ccontrol.design.font)
+                    imgui.Text("Font: ") imgui.SameLine() imgui.PushItemWidth(120)
+                    if imgui.InputText('##font', fnt, sizeof(fnt), imgui.InputTextFlags.EnterReturnsTrue) then ccontrol.design.font = u8:decode(str(fnt)) applyfont() end imgui.SameLine(nil, 10)
+
+                    fntsize = new.int(ccontrol.design.fontsize)
+                    imgui.Text("Font Size: ") imgui.SameLine() imgui.PushItemWidth(50)
+                    if imgui.DragInt("##fontsize", fntsize, imgui.InputTextFlags.EnterReturnsTrue) then ccontrol.design.fontsize = fntsize.v applyfont() end
+
+                    if imgui.Checkbox(u8("Box Around the overlay"), new.bool(ccontrol.design.boxtoggle)) then ccontrol.design.boxtoggle = not ccontrol.design.boxtoggle end
+                    if ccontrol.design.boxtoggle then imgui.SameLine() imgui.ColorEdit4('##presettings.dc', preset.boxcolor, imgui.ColorEditFlags.NoInputs + imgui.ColorEditFlags.AlphaBar) end
                 end
-            end
-            imgui.SameLine(nil, 10)
-            imgui.Text("Secondary Overlay: ") imgui.SameLine()
-            if imgui.Button(mousepos2 and u8'Cancel##2' or u8'Move with mouse##2', imgui.ImVec2(130, 20)) then
-                mousepos2 = not mousepos2
-                if mousepos2 then
-                    sampAddChatMessage('Press {FF0000}'..vk.id_to_name(vk.VK_LBUTTON)..' {FFFFFF}to save the position.', -1)
-                end
-            end
-
-            fnt = imgui.ImBuffer(30) fnt.v = ccontrol.design.font
-            imgui.Text("Font: ") imgui.SameLine() imgui.PushItemWidth(180)
-            if imgui.InputText("##font", fnt, imgui.InputTextFlags.EnterReturnsTrue) then ccontrol.design.font = fnt.v applyfont() end
-            imgui.SameLine(250)
-            imgui.Text("Font Size: ") imgui.SameLine() imgui.PushItemWidth(180)
-            if imgui.DragInt("##fontsize", fntsize, imgui.InputTextFlags.EnterReturnsTrue) then ccontrol.design.fontsize = fntsize.v applyfont() end
-
-            imgui.NewLine() imgui.NewLine()
-            imgui.SameLine(10)
-            if imgui.Checkbox(u8("Box Around the overlay"), imgui.ImBool(ccontrol.design.boxtoggle)) then
-                ccontrol.design.boxtoggle = not ccontrol.design.boxtoggle
-            end
-            imgui.SameLine(230)
-            if imgui.Checkbox(u8("Auto Save"), imgui.ImBool(ccontrol.design.autosave)) then
-                ccontrol.design.autosave = not ccontrol.design.autosave
-                inicfg.save(ccontrol, 'cruise_control.ini')
-            end
-            imgui.SameLine(370)
-            if imgui.Checkbox(u8("Auto Update Script"), imgui.ImBool(ccontrol.design.autoupdate)) then
-                ccontrol.design.autoupdate = not ccontrol.design.autoupdate
-            end
-        end
-        imgui.PopFont() imgui.PopStyleVar()
-    	imgui.End()
-  	end
-end
+        imgui.EndChild()
+    imgui.End()
+end)
 
 function main()
     if not isSampfuncsLoaded() or not isSampLoaded() then return end
@@ -223,12 +134,11 @@ function main()
                     sampAddChatMessage(string.format("{DFBD68}[%s]{FFFFFF} Current version: {00b7ff}[%s]{FFFFFF}. Click on 'Update Script' in menu to check for updates.", script.this.name, script_version_text), 10944256)
 		end)
 	end)
-    sampRegisterChatCommand("ccontrol", function() main_window_state.v = not main_window_state.v window2img = 0 end)
+    sampRegisterChatCommand("ccontrol", function() _menu = not _menu windno = 0 end)
     applyfont()
     while true do
-        imgui.Process = main_window_state.v
         wait(0)
-        if window2img == 1 then 
+        if windno == 1 then 
 			if mousepos then 
 				if isKeyJustPressed(vk.VK_LBUTTON) then 
 					mousepos = false
@@ -277,28 +187,28 @@ function main()
 
             if not (isPauseMenuActive() or sampIsScoreboardOpen()) then
                 local text = ("Vehicle Name: {FFFFFF00}%s {FFCCCCCC}Vehicle Health: %s"):format(carname, carhp)
-                if ccontrol.design.boxtoggle and ccontrol.design.nhtoggle then renderDrawBox(mousepos2 and fpos2[1] or ccontrol.design.xpos2, mousepos2 and fpos2[2] or ccontrol.design.ypos2, renderGetFontDrawTextLength(font, text) + 10, 20, 0xFF323232) end
-                if ccontrol.design.nhtoggle then renderFontDrawText(font, text, mousepos2 and fpos2[1] + 2 or ccontrol.design.xpos2 + 2, mousepos2 and fpos2[2] or ccontrol.design.ypos2, 0xFFCCCCCC) end
+                if ccontrol.design.boxtoggle and ccontrol.design.nhtoggle then renderDrawBox(mousepos2 and fpos2[1] - 2 or ccontrol.design.xpos2 - 2, mousepos2 and fpos2[2] - 20 or ccontrol.design.ypos2 - 20, renderGetFontDrawTextLength(font, text) + 10, 20, '0xFF'..string.sub(bit.tohex(join_argb(preset.boxcolor[3] * 255, preset.boxcolor[0] * 255, preset.boxcolor[1] * 255, preset.boxcolor[2] * 255)), 3, 8)) end
+                if ccontrol.design.nhtoggle then renderFontDrawText(font, text, mousepos2 and fpos2[1] + 2 or ccontrol.design.xpos2 + 2, mousepos2 and fpos2[2] - 20 or ccontrol.design.ypos2 - 20, 0xFFCCCCCC) end
             end
             if pdriver == 1 then
                 if isCharInAnyHeli(playerPed) and not (isPauseMenuActive() or sampIsScoreboardOpen()) then
                     local text = ("Hover Mode: %s {FFCCCCCC}Speed: {FFFFFF00}%.0f {FFCCCCCC}Door Status: %s"):format(hover and "{FF00CC00}ON" or "{FFCC0000}OFF", s1 * 3, doorStatus)
-                    if ccontrol.design.boxtoggle and ccontrol.design.togoverlay then renderDrawBox(mousepos and fpos[1] - 2 or ccontrol.design.xpos - 2, mousepos and fpos[2] - 20 or ccontrol.design.ypos - 20, renderGetFontDrawTextLength(font, text) + 10, 20, 0xFF323232) end
+                    if ccontrol.design.boxtoggle and ccontrol.design.togoverlay then renderDrawBox(mousepos and fpos[1] - 2 or ccontrol.design.xpos - 2, mousepos and fpos[2] - 20 or ccontrol.design.ypos - 20, renderGetFontDrawTextLength(font, text) + 10, 20, '0xFF'..string.sub(bit.tohex(join_argb(preset.boxcolor[3] * 255, preset.boxcolor[0] * 255, preset.boxcolor[1] * 255, preset.boxcolor[2] * 255)), 3, 8)) end
                     if ccontrol.design.togoverlay then renderFontDrawText(font, text, mousepos and fpos[1] + 2 or ccontrol.design.xpos + 2, mousepos and fpos[2] - 20 or ccontrol.design.ypos - 20, 0xFFCCCCCC) end
                 elseif isCharInModel(playerPed, 574) and not (isPauseMenuActive() or sampIsScoreboardOpen()) then
                     local text = ("Cruise Control can not be used on this vehicle.")
-                    if ccontrol.design.boxtoggle and ccontrol.design.togoverlay then renderDrawBox(mousepos and fpos[1] - 2 or ccontrol.design.xpos - 2, mousepos and fpos[2] - 20 or ccontrol.design.ypos - 20, renderGetFontDrawTextLength(font, text) + 10, 20, 0xFF323232) end
+                    if ccontrol.design.boxtoggle and ccontrol.design.togoverlay then renderDrawBox(mousepos and fpos[1] - 2 or ccontrol.design.xpos - 2, mousepos and fpos[2] - 20 or ccontrol.design.ypos - 20, renderGetFontDrawTextLength(font, text) + 10, 20, '0xFF'..string.sub(bit.tohex(join_argb(preset.boxcolor[3] * 255, preset.boxcolor[0] * 255, preset.boxcolor[1] * 255, preset.boxcolor[2] * 255)), 3, 8)) end
                     if ccontrol.design.togoverlay then renderFontDrawText(font, text, mousepos and fpos[1] + 2 or ccontrol.design.xpos + 2, mousepos and fpos[2] - 20 or ccontrol.design.ypos - 20, 0xFFCCCCCC) end
                 else
                     if not (isPauseMenuActive() or sampIsScoreboardOpen()) then
                     local text = ("Cruise Control: %s {FFCCCCCC}Speed: {FFFFFF00}%.0f {FFCCCCCC}Door Status: %s"):format(enable and "{FF00CC00}ON" or "{FFCC0000}OFF", s1 * 3, doorStatus)
-                    if ccontrol.design.boxtoggle and ccontrol.design.togoverlay then renderDrawBox(mousepos and fpos[1] - 2 or ccontrol.design.xpos - 2, mousepos and fpos[2] - 20 or ccontrol.design.ypos - 20, renderGetFontDrawTextLength(font, text) + 10, 20, 0xFF323232) end
+                    if ccontrol.design.boxtoggle and ccontrol.design.togoverlay then renderDrawBox(mousepos and fpos[1] - 2 or ccontrol.design.xpos - 2, mousepos and fpos[2] - 20 or ccontrol.design.ypos - 20, renderGetFontDrawTextLength(font, text) + 10, 20, '0xFF'..string.sub(bit.tohex(join_argb(preset.boxcolor[3] * 255, preset.boxcolor[0] * 255, preset.boxcolor[1] * 255, preset.boxcolor[2] * 255)), 3, 8)) end
                     if ccontrol.design.togoverlay then renderFontDrawText(font, text, mousepos and fpos[1] + 2 or ccontrol.design.xpos + 2, mousepos and fpos[2] - 20 or ccontrol.design.ypos - 20, 0xFFCCCCCC) end
                     end
                 end
             else
                 local text = ("{FFCCCCCC}Door Status: %s"):format(doorStatus)
-                if ccontrol.design.boxtoggle and ccontrol.design.togoverlay then renderDrawBox(mousepos and fpos[1] + 215 or ccontrol.design.xpos + 215, mousepos and fpos[2] - 20 or ccontrol.design.ypos - 20, renderGetFontDrawTextLength(font, text) + 10, 20, 0xFF323232) end
+                if ccontrol.design.boxtoggle and ccontrol.design.togoverlay then renderDrawBox(mousepos and fpos[1] + 215 or ccontrol.design.xpos + 215, mousepos and fpos[2] - 20 or ccontrol.design.ypos - 20, renderGetFontDrawTextLength(font, text) + 10, 20, '0xFF'..string.sub(bit.tohex(join_argb(preset.boxcolor[3] * 255, preset.boxcolor[0] * 255, preset.boxcolor[1] * 255, preset.boxcolor[2] * 255)), 3, 8)) end
                 if ccontrol.design.togoverlay then renderFontDrawText(font, text, mousepos and fpos[1] + 220 or ccontrol.design.xpos + 220, mousepos and fpos[2] - 20 or ccontrol.design.ypos - 20, 0xFFCCCCCC) end
             end
             if not (sampIsChatInputActive() or sampIsDialogActive() or isSampfuncsConsoleActive() or isPauseMenuActive()) and enable then
@@ -350,7 +260,7 @@ function onScriptTerminate(scr, quitGame)
 	if scr == script.this then 
 		showCursor(false)
         if ccontrol.design.autosave then
-		inicfg.save(ccontrol, 'cruise_control.ini')
+		SaveIni()
         end
 	end
 end
@@ -367,156 +277,21 @@ function getDownKeys()
     return keyslist, bool
 end
 
-function style()
-    imgui.SwitchContext()
-    local style = imgui.GetStyle()
-    local colors = style.Colors
-    local clr = imgui.Col
-    local ImVec4 = imgui.ImVec4
-    local ImVec2 = imgui.ImVec2
-
-   	style.WindowPadding 		= imgui.ImVec2(8, 8)
-    style.WindowRounding 		= 6
-    style.ChildWindowRounding 	= 5
-    style.FramePadding 			= imgui.ImVec2(5, 3)
-    style.FrameRounding 		= 3.0
-    style.ItemSpacing 			= imgui.ImVec2(5, 4)
-    style.ItemInnerSpacing 		= imgui.ImVec2(4, 4)
-    style.IndentSpacing 		= 21
-    style.ScrollbarSize 		= 10.0
-    style.ScrollbarRounding 	= 13
-    style.GrabMinSize 			= 8
-    style.GrabRounding			= 1
-    style.WindowTitleAlign 		= imgui.ImVec2(0.5, 0.5)
-    style.ButtonTextAlign 		= imgui.ImVec2(0.5, 0.5)
-
-    colors[clr.Text]                                = ImVec4(1.00, 1.00, 1.00, 1.00)
-    colors[clr.TextDisabled]                        = ImVec4(0.30, 0.30, 0.30, 1.00)
-    colors[clr.WindowBg]                            = ImVec4(0.06, 0.05, 0.07, 1.00)
-    colors[clr.ChildWindowBg]                       = ImVec4(1.00, 1.00, 1.00, 0.00)
-    colors[clr.PopupBg]                             = ImVec4(0.05, 0.05, 0.05, 1.00)
-    colors[clr.ComboBg]                             = ImVec4(0.00, 0.53, 0.76, 1.00)
-    colors[clr.Border]                              = ImVec4(0.80, 0.80, 0.83, 0.88)
-    colors[clr.BorderShadow]                        = ImVec4(0.00, 0.00, 0.00, 0.00)
-    colors[clr.FrameBg]                             = ImVec4(0.10, 0.09, 0.12, 1.00)
-    colors[clr.FrameBgHovered]                      = ImVec4(0.00, 0.53, 0.76, 0.30)
-    colors[clr.FrameBgActive]                       = ImVec4(0.00, 0.53, 0.76, 0.80)
-    colors[clr.TitleBg]                				= ImVec4(0.09, 0.09, 0.09, 1.00)
-    colors[clr.TitleBgActive]          				= ImVec4(0.09, 0.09, 0.09, 1.00)
-    colors[clr.TitleBgCollapsed]       				= ImVec4(1.00, 0.98, 0.95, 0.75)
-	colors[clr.MenuBarBg]                           = ImVec4(0.10, 0.09, 0.12, 1.00)
-    colors[clr.ScrollbarBg]                         = ImVec4(0.02, 0.02, 0.02, 0.53)
-    colors[clr.ScrollbarGrab]                       = ImVec4(0.31, 0.31, 0.31, 1.00)
-    colors[clr.ScrollbarGrabHovered]                = ImVec4(0.41, 0.41, 0.41, 1.00)
-    colors[clr.ScrollbarGrabActive]                 = ImVec4(0.51, 0.51, 0.51, 1.00)
-    colors[clr.CheckMark]                           = ImVec4(1.00, 0.42, 0.00, 0.53)
-    colors[clr.SliderGrab]                          = ImVec4(0.28, 0.28, 0.28, 1.00)
-    colors[clr.SliderGrabActive]                    = ImVec4(0.00, 0.53, 0.76, 1.00)
-    colors[clr.Button]                              = ImVec4(0.26, 0.26, 0.26, 0.30)
-    colors[clr.ButtonHovered]                       = ImVec4(0.00, 0.53, 0.76, 1.00)
-    colors[clr.ButtonActive]                        = ImVec4(0.00, 0.43, 0.76, 1.00)
-    colors[clr.Header]                              = ImVec4(0.12, 0.12, 0.12, 0.94)
-    colors[clr.HeaderHovered]                       = ImVec4(0.34, 0.34, 0.35, 0.89)
-    colors[clr.HeaderActive]                        = ImVec4(0.12, 0.12, 0.12, 0.94)
-    colors[clr.Separator]                           = ImVec4(0.30, 0.30, 0.30, 1.00)
-    colors[clr.SeparatorHovered]                    = ImVec4(0.26, 0.59, 0.98, 0.78)
-    colors[clr.SeparatorActive]                     = ImVec4(0.26, 0.59, 0.98, 1.00)
-    colors[clr.ResizeGrip]                          = ImVec4(0.26, 0.59, 0.98, 0.25)
-    colors[clr.ResizeGripHovered]                   = ImVec4(0.26, 0.59, 0.98, 0.67)
-    colors[clr.ResizeGripActive]                    = ImVec4(0.26, 0.59, 0.98, 0.95)
-    colors[clr.CloseButton]           				= ImVec4(0.50, 0.00, 0.00, 1.00)
-    colors[clr.CloseButtonHovered]     				= ImVec4(1.70, 0.70, 0.90, 0.60)
-    colors[clr.CloseButtonActive]     				= ImVec4(1.70, 0.70, 0.70, 1.00)
-    colors[clr.PlotLines]                           = ImVec4(0.61, 0.61, 0.61, 1.00)
-    colors[clr.PlotLinesHovered]                    = ImVec4(1.00, 0.43, 0.35, 1.00)
-    colors[clr.PlotHistogram]                       = ImVec4(0.90, 0.70, 0.00, 1.00)
-    colors[clr.PlotHistogramHovered]                = ImVec4(1.00, 0.60, 0.00, 1.00)
-    colors[clr.TextSelectedBg]                      = ImVec4(0.00, 0.43, 0.76, 1.00)
-    colors[clr.ModalWindowDarkening]                = ImVec4(0.20, 0.20, 0.20,  0.0)
-end
-
-function imgui.CenterTextColoredRGB(text)
-    local width = imgui.GetWindowWidth()
-    local style = imgui.GetStyle()
-    local colors = style.Colors
-    local ImVec4 = imgui.ImVec4
-
-    function explode_argb(argb)
-      local a = bit.band(bit.rshift(argb, 24), 0xFF)
-      local r = bit.band(bit.rshift(argb, 16), 0xFF)
-      local g = bit.band(bit.rshift(argb, 8), 0xFF)
-      local b = bit.band(argb, 0xFF)
-      return a, r, g, b
-    end
-    
-    function colorRgbToHex(rgb)
-        local hexadecimal = ''
-        for key, value in pairs(rgb) do
-            local hex = ''
-            while(value > 0)do
-                local index = math.fmod(value, 16) + 1
-                value = math.floor(value / 16)
-                hex = string.sub('0123456789ABCDEF', index, index) .. hex
-            end
-            if(string.len(hex) == 0)then hex = '00'
-            elseif(string.len(hex) == 1)then hex = '0' .. hex end
-            hexadecimal = hexadecimal .. hex
-        end
-        return hexadecimal
-    end
-
-    local getcolor = function(color)
-        if color:sub(1, 6):upper() == 'SSSSSS' then
-            local r, g, b = colors[1].x, colors[1].y, colors[1].z
-            local a = tonumber(color:sub(7, 8), 16) or colors[1].w * 255
-            return ImVec4(r, g, b, a / 255)
-        end
-        local color = type(color) == 'string' and tonumber(color, 16) or color
-        if type(color) ~= 'number' then return end
-        local r, g, b, a = explode_argb(color)
-        return imgui.ImColor(r, g, b, a):GetVec4()
-    end
-
-    local render_text = function(text_)
-        for w in text_:gmatch('[^\r\n]+') do
-            local textsize = w:gsub('{.-}', '')
-            local text_width = imgui.CalcTextSize(u8(textsize))
-            imgui.SetCursorPosX( width / 2 - text_width .x / 2 )
-            local text, colors_, m = {}, {}, 1
-            w = w:gsub('{(......)}', '{%1FF}')
-            while w:find('{........}') do
-                local n, k = w:find('{........}')
-                local color = getcolor(w:sub(n + 1, k - 1))
-                if color then
-                    text[#text], text[#text + 1] = w:sub(m, n - 1), w:sub(k + 1, #w)
-                    colors_[#colors_ + 1] = color
-                    m = n
-                end
-                w = w:sub(1, n - 1) .. w:sub(k + 1, #w)
-            end
-            if text[0] then
-                for i = 0, #text do
-                    imgui.TextColored(colors_[i] or colors[1], u8(text[i]))
-                    imgui.SameLine(nil, 0)
-                end
-                imgui.NewLine()
-            else
-                imgui.Text(u8(w))
-            end
-        end
-    end
-    render_text(text)
-end
-
-function buttonset()
-    imgui.PushStyleColor(imgui.Col.Text, imgui.ImVec4(0, 0, 0, 0.8))
-    imgui.PushStyleColor(imgui.Col.Button, imgui.ImVec4(0.988, 0.725, 0, 1))
-    imgui.PushStyleColor(imgui.Col.ButtonHovered, imgui.ImVec4(0.729, 0.552, 0.015, 1))
-    imgui.PushStyleColor(imgui.Col.ButtonActive, imgui.ImVec4(0.467, 0.00, 1, 0.8))
-end
-function buttonend()
-    imgui.PopStyleColor(4)
-    style()
+function imgui.BeginCustomTitle(title, titleSizeY, var, flags)
+    imgui.PushStyleVarVec2(imgui.StyleVar.WindowPadding, imgui.ImVec2(0, 0))
+    imgui.PushStyleVarFloat(imgui.StyleVar.WindowBorderSize, 0)
+    imgui.Begin(title, var, imgui.WindowFlags.NoTitleBar + (flags or 0))
+    imgui.SetCursorPos(imgui.ImVec2(0, 0))
+    local p = imgui.GetCursorScreenPos()
+    imgui.GetWindowDrawList():AddRectFilled(p, imgui.ImVec2(p.x + imgui.GetWindowSize().x, p.y + titleSizeY), imgui.GetColorU32Vec4(imgui.GetStyle().Colors[imgui.Col.TitleBgActive]), imgui.GetStyle().WindowRounding, 1 + 2)
+    imgui.SetCursorPos(imgui.ImVec2(imgui.GetWindowSize().x / 2 - imgui.CalcTextSize(title).x / 2, titleSizeY / 2 - imgui.CalcTextSize(title).y / 2))
+    imgui.Text(title)
+    imgui.SetCursorPos(imgui.ImVec2(imgui.GetWindowSize().x - (titleSizeY - 10) - 5, 5))
+    imgui.PushStyleVarFloat(imgui.StyleVar.FrameRounding, imgui.GetStyle().WindowRounding)
+    if imgui.Button('X##CLOSEBUTTON.WINDOW.'..title, imgui.ImVec2(titleSizeY - 10, titleSizeY - 10)) then _menu = false end
+    imgui.SetCursorPos(imgui.ImVec2(5, titleSizeY + 5))
+    imgui.PopStyleVar(3)
+    imgui.PushStyleVarVec2(imgui.StyleVar.WindowPadding, imgui.ImVec2(5, 5))
 end
 
 function applyfont()
@@ -546,4 +321,101 @@ function update_script(noupdatecheck)
 			end
 		end
 	end
+end
+
+function SaveIni()
+    ccontrol.boxcolor.r, ccontrol.boxcolor.g, ccontrol.boxcolor.b, ccontrol.boxcolor.a = preset.boxcolor[0], preset.boxcolor[1], preset.boxcolor[2], preset.boxcolor[3]
+    inicfg.save(ccontrol, 'cruise_control.ini')
+end
+
+function join_argb(a, r, g, b)
+    local argb = b  -- b
+    argb = bit.bor(argb, bit.lshift(g, 8))  -- g
+    argb = bit.bor(argb, bit.lshift(r, 16)) -- r
+    argb = bit.bor(argb, bit.lshift(a, 24)) -- a
+    return argb
+end
+
+function style()
+    imgui.SwitchContext()
+    --==[ STYLE ]==--
+    imgui.GetStyle().WindowPadding = imgui.ImVec2(8, 8)
+    imgui.GetStyle().FramePadding = imgui.ImVec2(5, 2)
+    imgui.GetStyle().ItemSpacing = imgui.ImVec2(5, 5)
+    imgui.GetStyle().ItemInnerSpacing = imgui.ImVec2(4, 4)
+    imgui.GetStyle().TouchExtraPadding = imgui.ImVec2(5, 5)
+    imgui.GetStyle().IndentSpacing = 5
+    imgui.GetStyle().ScrollbarSize = 10
+    imgui.GetStyle().GrabMinSize = 10
+
+    --==[ BORDER ]==--
+    imgui.GetStyle().WindowBorderSize = 0
+    imgui.GetStyle().ChildBorderSize = 1
+    imgui.GetStyle().PopupBorderSize = 0
+    imgui.GetStyle().FrameBorderSize = 0
+    imgui.GetStyle().TabBorderSize = 0
+
+    --==[ ROUNDING ]==--
+    imgui.GetStyle().WindowRounding = 5
+    imgui.GetStyle().ChildRounding = 5
+    imgui.GetStyle().FrameRounding = 5
+    imgui.GetStyle().PopupRounding = 5
+    imgui.GetStyle().ScrollbarRounding = 5
+    imgui.GetStyle().GrabRounding = 5
+    imgui.GetStyle().TabRounding = 5
+
+    --==[ ALIGN ]==--
+    imgui.GetStyle().WindowTitleAlign = imgui.ImVec2(0.5, 0.5)
+    imgui.GetStyle().ButtonTextAlign = imgui.ImVec2(0.5, 0.5)
+    imgui.GetStyle().SelectableTextAlign = imgui.ImVec2(0.5, 0.5)
+    
+    --==[ COLORS ]==--
+    imgui.GetStyle().Colors[imgui.Col.Text]                   = imgui.ImVec4(1.00, 1.00, 1.00, 1.00)
+    imgui.GetStyle().Colors[imgui.Col.TextDisabled]           = imgui.ImVec4(0.50, 0.50, 0.50, 1.00)
+    imgui.GetStyle().Colors[imgui.Col.WindowBg]               = imgui.ImVec4(0.07, 0.07, 0.07, 1.00)
+    imgui.GetStyle().Colors[imgui.Col.ChildBg]                = imgui.ImVec4(0.07, 0.07, 0.07, 1.00)
+    imgui.GetStyle().Colors[imgui.Col.PopupBg]                = imgui.ImVec4(0.07, 0.07, 0.07, 1.00)
+    imgui.GetStyle().Colors[imgui.Col.Border]                 = imgui.ImVec4(0.25, 0.25, 0.26, 0.54)
+    imgui.GetStyle().Colors[imgui.Col.BorderShadow]           = imgui.ImVec4(0.00, 0.00, 0.00, 0.00)
+    imgui.GetStyle().Colors[imgui.Col.FrameBg]                = imgui.ImVec4(0.12, 0.12, 0.12, 1.00)
+    imgui.GetStyle().Colors[imgui.Col.FrameBgHovered]         = imgui.ImVec4(0.25, 0.25, 0.26, 1.00)
+    imgui.GetStyle().Colors[imgui.Col.FrameBgActive]          = imgui.ImVec4(0.25, 0.25, 0.26, 1.00)
+    imgui.GetStyle().Colors[imgui.Col.TitleBg]                = imgui.ImVec4(0.12, 0.12, 0.12, 1.00)
+    imgui.GetStyle().Colors[imgui.Col.TitleBgActive]          = imgui.ImVec4(0.12, 0.12, 0.12, 1.00)
+    imgui.GetStyle().Colors[imgui.Col.TitleBgCollapsed]       = imgui.ImVec4(0.12, 0.12, 0.12, 1.00)
+    imgui.GetStyle().Colors[imgui.Col.MenuBarBg]              = imgui.ImVec4(0.12, 0.12, 0.12, 1.00)
+    imgui.GetStyle().Colors[imgui.Col.ScrollbarBg]            = imgui.ImVec4(0.12, 0.12, 0.12, 1.00)
+    imgui.GetStyle().Colors[imgui.Col.ScrollbarGrab]          = imgui.ImVec4(0.00, 0.00, 0.00, 1.00)
+    imgui.GetStyle().Colors[imgui.Col.ScrollbarGrabHovered]   = imgui.ImVec4(0.41, 0.41, 0.41, 1.00)
+    imgui.GetStyle().Colors[imgui.Col.ScrollbarGrabActive]    = imgui.ImVec4(0.51, 0.51, 0.51, 1.00)
+    imgui.GetStyle().Colors[imgui.Col.CheckMark]              = imgui.ImVec4(1.00, 1.00, 1.00, 1.00)
+    imgui.GetStyle().Colors[imgui.Col.SliderGrab]             = imgui.ImVec4(0.21, 0.20, 0.20, 1.00)
+    imgui.GetStyle().Colors[imgui.Col.SliderGrabActive]       = imgui.ImVec4(0.21, 0.20, 0.20, 1.00)
+    imgui.GetStyle().Colors[imgui.Col.Button]                 = imgui.ImVec4(0.12, 0.12, 0.12, 1.00)
+    imgui.GetStyle().Colors[imgui.Col.ButtonHovered]          = imgui.ImVec4(0.21, 0.20, 0.20, 1.00)
+    imgui.GetStyle().Colors[imgui.Col.ButtonActive]           = imgui.ImVec4(0.41, 0.41, 0.41, 1.00)
+    imgui.GetStyle().Colors[imgui.Col.Header]                 = imgui.ImVec4(0.12, 0.12, 0.12, 1.00)
+    imgui.GetStyle().Colors[imgui.Col.HeaderHovered]          = imgui.ImVec4(0.20, 0.20, 0.20, 1.00)
+    imgui.GetStyle().Colors[imgui.Col.HeaderActive]           = imgui.ImVec4(0.47, 0.47, 0.47, 1.00)
+    imgui.GetStyle().Colors[imgui.Col.Separator]              = imgui.ImVec4(0.12, 0.12, 0.12, 1.00)
+    imgui.GetStyle().Colors[imgui.Col.SeparatorHovered]       = imgui.ImVec4(0.12, 0.12, 0.12, 1.00)
+    imgui.GetStyle().Colors[imgui.Col.SeparatorActive]        = imgui.ImVec4(0.12, 0.12, 0.12, 1.00)
+    imgui.GetStyle().Colors[imgui.Col.ResizeGrip]             = imgui.ImVec4(1.00, 1.00, 1.00, 0.25)
+    imgui.GetStyle().Colors[imgui.Col.ResizeGripHovered]      = imgui.ImVec4(1.00, 1.00, 1.00, 0.67)
+    imgui.GetStyle().Colors[imgui.Col.ResizeGripActive]       = imgui.ImVec4(1.00, 1.00, 1.00, 0.95)
+    imgui.GetStyle().Colors[imgui.Col.Tab]                    = imgui.ImVec4(0.12, 0.12, 0.12, 1.00)
+    imgui.GetStyle().Colors[imgui.Col.TabHovered]             = imgui.ImVec4(0.28, 0.28, 0.28, 1.00)
+    imgui.GetStyle().Colors[imgui.Col.TabActive]              = imgui.ImVec4(0.30, 0.30, 0.30, 1.00)
+    imgui.GetStyle().Colors[imgui.Col.TabUnfocused]           = imgui.ImVec4(0.07, 0.10, 0.15, 0.97)
+    imgui.GetStyle().Colors[imgui.Col.TabUnfocusedActive]     = imgui.ImVec4(0.14, 0.26, 0.42, 1.00)
+    imgui.GetStyle().Colors[imgui.Col.PlotLines]              = imgui.ImVec4(0.61, 0.61, 0.61, 1.00)
+    imgui.GetStyle().Colors[imgui.Col.PlotLinesHovered]       = imgui.ImVec4(1.00, 0.43, 0.35, 1.00)
+    imgui.GetStyle().Colors[imgui.Col.PlotHistogram]          = imgui.ImVec4(0.90, 0.70, 0.00, 1.00)
+    imgui.GetStyle().Colors[imgui.Col.PlotHistogramHovered]   = imgui.ImVec4(1.00, 0.60, 0.00, 1.00)
+    imgui.GetStyle().Colors[imgui.Col.TextSelectedBg]         = imgui.ImVec4(1.00, 0.00, 0.00, 0.35)
+    imgui.GetStyle().Colors[imgui.Col.DragDropTarget]         = imgui.ImVec4(1.00, 1.00, 0.00, 0.90)
+    imgui.GetStyle().Colors[imgui.Col.NavHighlight]           = imgui.ImVec4(0.26, 0.59, 0.98, 1.00)
+    imgui.GetStyle().Colors[imgui.Col.NavWindowingHighlight]  = imgui.ImVec4(1.00, 1.00, 1.00, 0.70)
+    imgui.GetStyle().Colors[imgui.Col.NavWindowingDimBg]      = imgui.ImVec4(0.80, 0.80, 0.80, 0.20)
+    imgui.GetStyle().Colors[imgui.Col.ModalWindowDimBg]       = imgui.ImVec4(0.00, 0.00, 0.00, 0.70)
 end
