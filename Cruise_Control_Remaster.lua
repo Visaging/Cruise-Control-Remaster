@@ -1,8 +1,8 @@
 script_name("Cruise Control Remaster")
 script_author("Visage A.K.A. Ishaan Dunne")
 
-local script_version = 6.77
-local script_version_text = '6.77'
+local script_version = 6.78
+local script_version_text = '6.78'
 
 require "moonloader"
 require "sampfuncs"
@@ -14,9 +14,11 @@ local update_url = "https://raw.githubusercontent.com/Visaging/Cruise-Control-Re
 local imgui, ffi = require 'mimgui', require 'ffi'
 local new, str, sizeof = imgui.new, ffi.string, ffi.sizeof
 local inicfg = require 'inicfg'
+local gkeys  = require 'game.keys'
 local vk = require 'vkeys'
 local encoding = require "encoding"
 local enable, hover, mousepos, mousepos2, windno, fpos, fpos2, _menu, ctogkey, cikey, cdkey, chk = false, false, false, false, 0, {}, {}, false, false, false, false, false
+moto, bike = {[448] = true, [461] = true, [462] = true, [463] = true, [468] = true, [471] = true, [521] = true, [522] = true, [523] = true, [581] = true, [586] = true}, {[481] = true, [509] = true, [510] = true}
 encoding.default = 'CP1251'
 u8 = encoding.UTF8
 
@@ -63,7 +65,7 @@ function()
             imgui.SetCursorPos(imgui.ImVec2(27, 5))
             imgui.Text("Main Settings")
             imgui.Separator()
-            if imgui.Button(u8'Key Settings', imgui.ImVec2(120, 20)) then windno = 0 end
+            if imgui.Button(u8'Key Settings', imgui.ImVec2(120, 20)) then windno = 0 end imgui.Spacing()
             if imgui.Button(u8'Overlay Settings', imgui.ImVec2(120, 20)) then windno = 1 end
         imgui.EndChild()
 
@@ -75,8 +77,8 @@ function()
             imgui.Separator()
             if imgui.Button(u8'Update Script', imgui.ImVec2(120, 20)) then update_script(true) end
             if imgui.Button(u8'Save Config', imgui.ImVec2(120, 20)) then SaveIni() sampAddChatMessage(string.format("{DFBD68}[%s]{FFFFFF} Config Saved!", script.this.name), -1) end
-            if imgui.Button(u8'Reload Script', imgui.ImVec2(120, 20)) then SaveIni() thisScript():reload() end
-            if imgui.Checkbox("Auto Update", new.bool(ccontrol.design.autoupdate)) then ccontrol.design.autoupdate = not ccontrol.design.autoupdate end
+            if imgui.Button(u8'Reload Script', imgui.ImVec2(120, 20)) then SaveIni() thisScript():reload() end imgui.Spacing()
+            if imgui.Checkbox("Auto Update", new.bool(ccontrol.design.autoupdate)) then ccontrol.design.autoupdate = not ccontrol.design.autoupdate end imgui.Spacing()
             if imgui.Checkbox("Auto Save", new.bool(ccontrol.design.autosave)) then ccontrol.design.autosave = not ccontrol.design.autosave end
         imgui.EndChild()
 
@@ -84,40 +86,41 @@ function()
 
         imgui.BeginChild("##3", imgui.ImVec2(355, 290), true)
             if windno == 0 then
-                imgui.Text("Change Toggle Key: ") imgui.SameLine() imgui.PushItemWidth(100)
-                if imgui.Button(ctogkey and 'Press any key' or vk.id_to_name(ccontrol.settings.togglekey)) then ctogkey = true lua_thread.create(function() while ctogkey do wait(0) local keydown, result = getDownKeys() if result then ccontrol.settings.togglekey = keydown ctogkey = false end end end) end
+                imgui.Text("Change Cruise Key: ") imgui.SameLine() imgui.PushItemWidth(100)
+                if imgui.Button(ctogkey and 'Press any key' or vk.id_to_name(ccontrol.settings.togglekey)) then ctogkey = true lua_thread.create(function() while ctogkey do wait(0) local keydown, result = getDownKeys() if result then ccontrol.settings.togglekey = keydown ctogkey = false end end end) end imgui.Spacing()
                 
                 imgui.Text("Change Hover Key: ") imgui.SameLine() imgui.PushItemWidth(100)
-                if imgui.Button(chk and 'Press any key' or vk.id_to_name(ccontrol.settings.hoverkey)) then chk = true lua_thread.create(function() while chk do wait(0) local keydown, result = getDownKeys() if result then ccontrol.settings.hoverkey = keydown chk = false end end end) end
+                if imgui.Button(chk and 'Press any key' or vk.id_to_name(ccontrol.settings.hoverkey)) then chk = true lua_thread.create(function() while chk do wait(0) local keydown, result = getDownKeys() if result then ccontrol.settings.hoverkey = keydown chk = false end end end) end imgui.Spacing()
                 
                 imgui.Text("Change Speed Increase Key: ") imgui.SameLine() imgui.PushItemWidth(100)
-                if imgui.Button(cikey and 'Press any key' or vk.id_to_name(ccontrol.settings.increasekey)) then cikey = true lua_thread.create(function() while cikey do wait(0) local keydown, result = getDownKeys() if result then ccontrol.settings.increasekey = keydown cikey = false end end end) end
+                if imgui.Button(cikey and 'Press any key' or vk.id_to_name(ccontrol.settings.increasekey)) then cikey = true lua_thread.create(function() while cikey do wait(0) local keydown, result = getDownKeys() if result then ccontrol.settings.increasekey = keydown cikey = false end end end) end imgui.Spacing()
 
                 imgui.Text("Change Speed Decrease Key: ") imgui.SameLine() imgui.PushItemWidth(100)
                 if imgui.Button(cdkey and 'Press any key' or vk.id_to_name(ccontrol.settings.decreasekey)) then cdkey = true lua_thread.create(function() while cdkey do wait(0) local keydown, result = getDownKeys() if result then ccontrol.settings.decreasekey = keydown cdkey = false end end end) end
 
             elseif windno == 1 then
-                    if imgui.Checkbox(u8("Toggle Primary Overlay"), new.bool(ccontrol.design.togoverlay)) then ccontrol.design.togoverlay = not ccontrol.design.togoverlay end imgui.SameLine(nil, 20)
+                if imgui.Checkbox(u8("Toggle Primary Overlay"), new.bool(ccontrol.design.togoverlay)) then ccontrol.design.togoverlay = not ccontrol.design.togoverlay end imgui.SameLine(nil, 15)
+                
+                if imgui.Checkbox(u8("Toggle Secondary Overlay"), new.bool(ccontrol.design.nhtoggle)) then ccontrol.design.nhtoggle = not ccontrol.design.nhtoggle end imgui.NewLine()
 
-                    if imgui.Checkbox(u8("Toggle Secondary Overlay"), new.bool(ccontrol.design.nhtoggle)) then ccontrol.design.nhtoggle = not ccontrol.design.nhtoggle end imgui.NewLine()
-                    
-                    imgui.Text("Primary Overlay: ") imgui.SameLine() 
-                    if imgui.Button(mousepos and u8'Cancel##1' or u8'Move with mouse##1', imgui.ImVec2(130, 20)) then mousepos = not mousepos if mousepos then sampAddChatMessage('Press {FF0000}'..vk.id_to_name(vk.VK_LBUTTON)..' {FFFFFF}to save the position.', -1) end end
+                imgui.Text("Primary Overlay: ") imgui.SameLine() 
+                if imgui.Button(mousepos and u8'Cancel##1' or u8'Move with mouse##1', imgui.ImVec2(130, 20)) then mousepos = not mousepos if mousepos then sampAddChatMessage('Press {FF0000}'..vk.id_to_name(vk.VK_LBUTTON)..' {FFFFFF}to save the position.', -1) end end
 
-                    imgui.Text("Secondary Overlay: ") imgui.SameLine()
-                    if imgui.Button(mousepos2 and u8'Cancel##2' or u8'Move with mouse##2', imgui.ImVec2(130, 20)) then mousepos2 = not mousepos2 if mousepos2 then sampAddChatMessage('Press {FF0000}'..vk.id_to_name(vk.VK_LBUTTON)..' {FFFFFF}to save the position.', -1) end end
+                imgui.Text("Secondary Overlay: ") imgui.SameLine()
+                if imgui.Button(mousepos2 and u8'Cancel##2' or u8'Move with mouse##2', imgui.ImVec2(130, 20)) then mousepos2 = not mousepos2 if mousepos2 then sampAddChatMessage('Press {FF0000}'..vk.id_to_name(vk.VK_LBUTTON)..' {FFFFFF}to save the position.', -1) end end
 
-                    fnt = new.char[256](ccontrol.design.font)
-                    imgui.Text("Font: ") imgui.SameLine() imgui.PushItemWidth(120)
-                    if imgui.InputText('##font', fnt, sizeof(fnt), imgui.InputTextFlags.EnterReturnsTrue) then ccontrol.design.font = u8:decode(str(fnt)) applyfont() end imgui.SameLine(nil, 10)
+                fnt = new.char[256](ccontrol.design.font)
+                imgui.Text("Font: ") imgui.SameLine() imgui.PushItemWidth(120)
+                if imgui.InputText('##font', fnt, sizeof(fnt), imgui.InputTextFlags.EnterReturnsTrue) then ccontrol.design.font = u8:decode(str(fnt)) applyfont() end imgui.SameLine(nil, 10)
 
-                    fntsize = new.int(ccontrol.design.fontsize)
-                    imgui.Text("Font Size: ") imgui.SameLine() imgui.PushItemWidth(50)
-                    if imgui.DragInt("##fontsize", fntsize, imgui.InputTextFlags.EnterReturnsTrue) then ccontrol.design.fontsize = fntsize.v applyfont() end
+                fntsize = new.int(ccontrol.design.fontsize)
+                imgui.Text("Font Size: ") imgui.SameLine() imgui.PushItemWidth(50)
+                if imgui.DragInt("##fontsize", fntsize, imgui.InputTextFlags.EnterReturnsTrue) then ccontrol.design.fontsize = fntsize.v applyfont() end
 
-                    if imgui.Checkbox(u8("Box Around the overlay"), new.bool(ccontrol.design.boxtoggle)) then ccontrol.design.boxtoggle = not ccontrol.design.boxtoggle end
-                    if ccontrol.design.boxtoggle then imgui.SameLine() imgui.ColorEdit4('##presettings.dc', preset.boxcolor, imgui.ColorEditFlags.NoInputs + imgui.ColorEditFlags.AlphaBar) end
-                end
+                imgui.Spacing() imgui.Separator() imgui.Spacing()
+                if imgui.Checkbox(u8("Box Around the overlay"), new.bool(ccontrol.design.boxtoggle)) then ccontrol.design.boxtoggle = not ccontrol.design.boxtoggle end
+                if ccontrol.design.boxtoggle then imgui.Text("Box Color: ") imgui.SameLine() imgui.ColorEdit4('##presettings.dc', preset.boxcolor, imgui.ColorEditFlags.NoInputs + imgui.ColorEditFlags.AlphaBar) end
+            end
         imgui.EndChild()
     imgui.End()
 end)
@@ -126,12 +129,12 @@ function main()
     if not isSampfuncsLoaded() or not isSampLoaded() then return end
     while not isSampAvailable() do wait(100) end
     if ccontrol.design.autoupdate then
-            update_script(false)
+        update_script(false)
     end
     sampAddChatMessage("{DFBD68}Cruise Control Remaster by {FFFF00}Visage. {FF0000}[/ccontrol] {FFFFFF}to change keys/settings.", 10944256)
     sampRegisterChatCommand("ccrversion", function()
             lua_thread.create(function()
-                    sampAddChatMessage(string.format("{DFBD68}[%s]{FFFFFF} Current version: {00b7ff}[%s]{FFFFFF}. Click on 'Update Script' in menu to check for updates.", script.this.name, script_version_text), 10944256)
+                sampAddChatMessage(string.format("{DFBD68}[%s]{FFFFFF} Current version: {00b7ff}[%s]{FFFFFF}. Click on 'Update Script' in menu to check for updates.", script.this.name, script_version_text), 10944256)
 		end)
 	end)
     sampRegisterChatCommand("ccontrol", function() _menu = not _menu windno = 0 end)
@@ -163,63 +166,37 @@ function main()
             if mousepos2 then mousepos2 = false end
 		end 
         if isCharInAnyCar(playerPed) then
-            local s1 = getCarSpeed(storeCarCharIsInNoSave(playerPed))
-            carhandle = storeCarCharIsInNoSave(playerPed)
-            carhp = getCarHealth(carhandle)
-            ds = getCarDoorLockStatus(carhandle)
-            pdriver = getDriverOfCar(carhandle)
-            carmodel = getCarModel(carhandle)
-            carname = getGxtText(getNameOfVehicleModel(carmodel))
-
-            if ds == 0 then
-                doorStatus = "{FFCC0000}Unlocked"
-            elseif ds == 2 then
-                doorStatus = "{FF00CC00}Locked"
-            end
-
-            if carhp >= 750 then
-                carhp = "{00ff40}"..carhp
-            elseif carhp <= 750 and carhp > 400 then
-                carhp = "{edf72a}"..carhp
-            elseif carhp <= 400 then
-                carhp = "{ff0000}"..carhp
-            end
-
+            local carhandle = storeCarCharIsInNoSave(playerPed)
+            local s1, carhp, ds, pdriver, carname = getCarSpeed(carhandle), getCarHealth(carhandle), getCarDoorLockStatus(carhandle), getDriverOfCar(carhandle), getGxtText(getNameOfVehicleModel(getCarModel(carhandle)))
+            local doorStatus, carhp = ds == 0 and "{FFCC0000}Unlocked" or ds == 2 and "{FF00CC00}Locked", carhp >= 750 and "{00ff40}"..carhp or carhp <= 750 and carhp > 400 and "{edf72a}"..carhp or carhp <= 400 and "{ff0000}"..carhp
             if not (isPauseMenuActive() or sampIsScoreboardOpen()) then
-                local text = ("Vehicle Name: {FFFFFF00}%s {FFCCCCCC}Vehicle Health: %s"):format(carname, carhp)
-                if ccontrol.design.boxtoggle and ccontrol.design.nhtoggle then renderDrawBox(mousepos2 and fpos2[1] - 2 or ccontrol.design.xpos2 - 2, mousepos2 and fpos2[2] - 20 or ccontrol.design.ypos2 - 20, renderGetFontDrawTextLength(font, text) + 10, 20, '0xFF'..string.sub(bit.tohex(join_argb(preset.boxcolor[3] * 255, preset.boxcolor[0] * 255, preset.boxcolor[1] * 255, preset.boxcolor[2] * 255)), 3, 8)) end
-                if ccontrol.design.nhtoggle then renderFontDrawText(font, text, mousepos2 and fpos2[1] + 2 or ccontrol.design.xpos2 + 2, mousepos2 and fpos2[2] - 20 or ccontrol.design.ypos2 - 20, 0xFFCCCCCC) end
-            end
-            if pdriver == 1 then
-                if isCharInAnyHeli(playerPed) and not (isPauseMenuActive() or sampIsScoreboardOpen()) then
-                    local text = ("Hover Mode: %s {FFCCCCCC}Speed: {FFFFFF00}%.0f {FFCCCCCC}Door Status: %s"):format(hover and "{FF00CC00}ON" or "{FFCC0000}OFF", s1 * 3, doorStatus)
-                    if ccontrol.design.boxtoggle and ccontrol.design.togoverlay then renderDrawBox(mousepos and fpos[1] - 2 or ccontrol.design.xpos - 2, mousepos and fpos[2] - 20 or ccontrol.design.ypos - 20, renderGetFontDrawTextLength(font, text) + 10, 20, '0xFF'..string.sub(bit.tohex(join_argb(preset.boxcolor[3] * 255, preset.boxcolor[0] * 255, preset.boxcolor[1] * 255, preset.boxcolor[2] * 255)), 3, 8)) end
-                    if ccontrol.design.togoverlay then renderFontDrawText(font, text, mousepos and fpos[1] + 2 or ccontrol.design.xpos + 2, mousepos and fpos[2] - 20 or ccontrol.design.ypos - 20, 0xFFCCCCCC) end
-                elseif isCharInModel(playerPed, 574) and not (isPauseMenuActive() or sampIsScoreboardOpen()) then
-                    local text = ("Cruise Control can not be used on this vehicle.")
-                    if ccontrol.design.boxtoggle and ccontrol.design.togoverlay then renderDrawBox(mousepos and fpos[1] - 2 or ccontrol.design.xpos - 2, mousepos and fpos[2] - 20 or ccontrol.design.ypos - 20, renderGetFontDrawTextLength(font, text) + 10, 20, '0xFF'..string.sub(bit.tohex(join_argb(preset.boxcolor[3] * 255, preset.boxcolor[0] * 255, preset.boxcolor[1] * 255, preset.boxcolor[2] * 255)), 3, 8)) end
-                    if ccontrol.design.togoverlay then renderFontDrawText(font, text, mousepos and fpos[1] + 2 or ccontrol.design.xpos + 2, mousepos and fpos[2] - 20 or ccontrol.design.ypos - 20, 0xFFCCCCCC) end
-                else
-                    if not (isPauseMenuActive() or sampIsScoreboardOpen()) then
-                    local text = ("Cruise Control: %s {FFCCCCCC}Speed: {FFFFFF00}%.0f {FFCCCCCC}Door Status: %s"):format(enable and "{FF00CC00}ON" or "{FFCC0000}OFF", s1 * 3, doorStatus)
-                    if ccontrol.design.boxtoggle and ccontrol.design.togoverlay then renderDrawBox(mousepos and fpos[1] - 2 or ccontrol.design.xpos - 2, mousepos and fpos[2] - 20 or ccontrol.design.ypos - 20, renderGetFontDrawTextLength(font, text) + 10, 20, '0xFF'..string.sub(bit.tohex(join_argb(preset.boxcolor[3] * 255, preset.boxcolor[0] * 255, preset.boxcolor[1] * 255, preset.boxcolor[2] * 255)), 3, 8)) end
-                    if ccontrol.design.togoverlay then renderFontDrawText(font, text, mousepos and fpos[1] + 2 or ccontrol.design.xpos + 2, mousepos and fpos[2] - 20 or ccontrol.design.ypos - 20, 0xFFCCCCCC) end
+                text2 = ("Vehicle Name: {FFFFFF00}%s {FFCCCCCC}Vehicle Health: %s"):format(carname, carhp)
+                if pdriver == 1 then
+                    if isCharInAnyHeli(playerPed) then
+                        text = ("Hover Mode: %s {FFCCCCCC}Speed: {FFFFFF00}%.0f {FFCCCCCC}Door Status: %s"):format(hover and "{FF00CC00}ON" or "{FFCC0000}OFF", s1 * 3, doorStatus)
+                    elseif isCharInModel(playerPed, 574) then
+                        text = ("Cruise Control can not be used on this vehicle.")
+                    else
+                        text = ("Cruise Control: %s {FFCCCCCC}Speed: {FFFFFF00}%.0f {FFCCCCCC}Door Status: %s"):format(enable and "{FF00CC00}ON" or "{FFCC0000}OFF", s1 * 3, doorStatus)
                     end
+                else
+                    text = ("{FFCCCCCC}Door Status: %s"):format(doorStatus)
                 end
-            else
-                local text = ("{FFCCCCCC}Door Status: %s"):format(doorStatus)
-                if ccontrol.design.boxtoggle and ccontrol.design.togoverlay then renderDrawBox(mousepos and fpos[1] + 215 or ccontrol.design.xpos + 215, mousepos and fpos[2] - 20 or ccontrol.design.ypos - 20, renderGetFontDrawTextLength(font, text) + 10, 20, '0xFF'..string.sub(bit.tohex(join_argb(preset.boxcolor[3] * 255, preset.boxcolor[0] * 255, preset.boxcolor[1] * 255, preset.boxcolor[2] * 255)), 3, 8)) end
-                if ccontrol.design.togoverlay then renderFontDrawText(font, text, mousepos and fpos[1] + 220 or ccontrol.design.xpos + 220, mousepos and fpos[2] - 20 or ccontrol.design.ypos - 20, 0xFFCCCCCC) end
+                if ccontrol.design.boxtoggle and ccontrol.design.togoverlay then renderDrawBox(mousepos and fpos[1] - 5 or ccontrol.design.xpos - 5, mousepos and fpos[2] - 1 or ccontrol.design.ypos - 1, renderGetFontDrawTextLength(font, text) + 10, 20, '0xFF'..string.sub(bit.tohex(join_argb(preset.boxcolor[3] * 255, preset.boxcolor[0] * 255, preset.boxcolor[1] * 255, preset.boxcolor[2] * 255)), 3, 8)) end
+                if ccontrol.design.togoverlay then renderFontDrawText(font, text, mousepos and fpos[1] or ccontrol.design.xpos, mousepos and fpos[2] or ccontrol.design.ypos, 0xFFCCCCCC) end
+                if ccontrol.design.boxtoggle and ccontrol.design.nhtoggle then renderDrawBox(mousepos2 and fpos2[1] - 5 or ccontrol.design.xpos2 - 5, mousepos2 and fpos2[2] - 1 or ccontrol.design.ypos2 - 1, renderGetFontDrawTextLength(font, text2) + 10, 20, '0xFF'..string.sub(bit.tohex(join_argb(preset.boxcolor[3] * 255, preset.boxcolor[0] * 255, preset.boxcolor[1] * 255, preset.boxcolor[2] * 255)), 3, 8)) end
+                if ccontrol.design.nhtoggle then renderFontDrawText(font, text2, mousepos2 and fpos2[1] or ccontrol.design.xpos2, mousepos2 and fpos2[2] or ccontrol.design.ypos2, 0xFFCCCCCC) end
             end
+
             if not (sampIsChatInputActive() or sampIsDialogActive() or isSampfuncsConsoleActive() or isPauseMenuActive()) and enable then
                 if wasKeyPressed(ccontrol.settings.increasekey) then speed = speed + 1 end
                 if wasKeyPressed(ccontrol.settings.decreasekey) then speed = speed - 1 end
             end
             if enable then
                 if getCarSpeed(storeCarCharIsInNoSave(playerPed)) < speed then
-                    setGameKeyState(16, 150)
+                    setGameKeyState(gkeys.vehicle.ACCELERATE, 150)
                 elseif getCarSpeed(storeCarCharIsInNoSave(playerPed)) > speed + 0.6666666666666667 then
-                    setGameKeyState(14, 80)
+                    setGameKeyState(gkeys.vehicle.BRAKE, 80)
                 end
                 if not (sampIsChatInputActive() or sampIsDialogActive() or isSampfuncsConsoleActive() or isPauseMenuActive()) then
                     if isKeyDown(87) or isKeyDown(83) or s1 < 1 then
@@ -326,6 +303,11 @@ end
 function SaveIni()
     ccontrol.boxcolor.r, ccontrol.boxcolor.g, ccontrol.boxcolor.b, ccontrol.boxcolor.a = preset.boxcolor[0], preset.boxcolor[1], preset.boxcolor[2], preset.boxcolor[3]
     inicfg.save(ccontrol, 'cruise_control.ini')
+end
+
+function setGameKeyUpDown(key, value)
+	setGameKeyState(key, value)
+	setGameKeyState(key, 0)
 end
 
 function join_argb(a, r, g, b)
