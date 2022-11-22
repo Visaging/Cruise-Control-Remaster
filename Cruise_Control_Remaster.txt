@@ -1,1 +1,1 @@
-version: 6.77
+version: 6.78
