@@ -1,8 +1,8 @@
 script_name("Cruise Control Remaster")
 script_author("Visage A.K.A. Ishaan Dunne")
 
-local script_version = 6.78
-local script_version_text = '6.78'
+local script_version = 6.79
+local script_version_text = '6.79'
 
 require "moonloader"
 require "sampfuncs"
@@ -115,7 +115,7 @@ function()
 
                 fntsize = new.int(ccontrol.design.fontsize)
                 imgui.Text("Font Size: ") imgui.SameLine() imgui.PushItemWidth(50)
-                if imgui.DragInt("##fontsize", fntsize, imgui.InputTextFlags.EnterReturnsTrue) then ccontrol.design.fontsize = fntsize.v applyfont() end
+                if imgui.DragInt("##fontsize", fntsize, imgui.InputTextFlags.EnterReturnsTrue) then ccontrol.design.fontsize = fntsize[0] applyfont() end
 
                 imgui.Spacing() imgui.Separator() imgui.Spacing()
                 if imgui.Checkbox(u8("Box Around the overlay"), new.bool(ccontrol.design.boxtoggle)) then ccontrol.design.boxtoggle = not ccontrol.design.boxtoggle end
@@ -138,6 +138,7 @@ function main()
 		end)
 	end)
     sampRegisterChatCommand("ccontrol", function() _menu = not _menu windno = 0 end)
+    sampRegisterChatCommand("setspeed", cspeed)
     applyfont()
     while true do
         wait(0)
@@ -230,6 +231,18 @@ function main()
             enable = false
             hover = false
         end
+    end
+end
+
+function cspeed(cspeed)
+    if enable then
+        if (cspeed ~= nil and string.match(cspeed, "%d+") and tonumber(cspeed) ~= nil) then
+            speed = tonumber(cspeed) / 3
+        else
+            sampAddChatMessage("{FFFFFF}USAGE: /setspeed [speed]", 10944256)
+        end
+    else
+        sampAddChatMessage("{FFFFFF}Cruise mode is currently not engaged. Press {FF0000}"..string.char(ccontrol.settings.togglekey).." {FFFFFF}to enage cruise mode.", 10944256)
     end
 end
 
