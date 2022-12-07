@@ -1,8 +1,8 @@
 script_name("Cruise Control Remaster")
 script_author("Visage A.K.A. Ishaan Dunne")
 
-local script_version = 6.79
-local script_version_text = '6.79'
+local script_version = 6.80
+local script_version_text = '6.80'
 
 require "moonloader"
 require "sampfuncs"
@@ -18,9 +18,22 @@ local gkeys  = require 'game.keys'
 local vk = require 'vkeys'
 local encoding = require "encoding"
 local enable, hover, mousepos, mousepos2, windno, fpos, fpos2, _menu, ctogkey, cikey, cdkey, chk = false, false, false, false, 0, {}, {}, false, false, false, false, false
-moto, bike = {[448] = true, [461] = true, [462] = true, [463] = true, [468] = true, [471] = true, [521] = true, [522] = true, [523] = true, [581] = true, [586] = true}, {[481] = true, [509] = true, [510] = true}
 encoding.default = 'CP1251'
 u8 = encoding.UTF8
+
+imgpath = getWorkingDirectory() .. "\\resource\\Cruise Control Remaster\\"
+imgpath2 = getWorkingDirectory() .. "\\resource\\"
+imgpath3 = imgpath .. "logo.jpg"
+
+if not doesDirectoryExist(imgpath2) then
+    createDirectory(imgpath2)
+end
+if not doesDirectoryExist(imgpath) then
+    createDirectory(imgpath)
+end
+if not doesFileExist(imgpath3) then
+    downloadUrlToFile("https://raw.githubusercontent.com/Visaging/Cruise-Control-Remaster/main/logo.jpg", imgpath3)
+end
 
 local ccontrol = inicfg.load({
     settings = 
@@ -75,7 +88,7 @@ function()
             imgui.SetCursorPos(imgui.ImVec2(27, 5))
             imgui.Text("Script Settings")
             imgui.Separator()
-            if imgui.Button(u8'Update Script', imgui.ImVec2(120, 20)) then update_script(true) end
+            if imgui.Button(u8'Update Script', imgui.ImVec2(120, 20)) then update_script(true, true, false, false) end
             if imgui.Button(u8'Save Config', imgui.ImVec2(120, 20)) then SaveIni() sampAddChatMessage(string.format("{DFBD68}[%s]{FFFFFF} Config Saved!", script.this.name), -1) end
             if imgui.Button(u8'Reload Script', imgui.ImVec2(120, 20)) then SaveIni() thisScript():reload() end imgui.Spacing()
             if imgui.Checkbox("Auto Update", new.bool(ccontrol.design.autoupdate)) then ccontrol.design.autoupdate = not ccontrol.design.autoupdate end imgui.Spacing()
@@ -120,6 +133,8 @@ function()
                 imgui.Spacing() imgui.Separator() imgui.Spacing()
                 if imgui.Checkbox(u8("Box Around the overlay"), new.bool(ccontrol.design.boxtoggle)) then ccontrol.design.boxtoggle = not ccontrol.design.boxtoggle end
                 if ccontrol.design.boxtoggle then imgui.Text("Box Color: ") imgui.SameLine() imgui.ColorEdit4('##presettings.dc', preset.boxcolor, imgui.ColorEditFlags.NoInputs + imgui.ColorEditFlags.AlphaBar) end
+            elseif windno == 3 then
+                imgui.Image(imgui.CreateTextureFromFile(getGameDirectory() .. "\\moonloader\\resource\\Cruise Control Remaster\\logo.jpg") , imgui.ImVec2(345, 280))
             end
         imgui.EndChild()
     imgui.End()
@@ -128,16 +143,10 @@ end)
 function main()
     if not isSampfuncsLoaded() or not isSampLoaded() then return end
     while not isSampAvailable() do wait(100) end
-    if ccontrol.design.autoupdate then
-        update_script(false)
-    end
+    if ccontrol.design.autoupdate then update_script(true, false, false, false) else update_script(false, false, false, true) end
     sampAddChatMessage("{DFBD68}Cruise Control Remaster by {FFFF00}Visage. {FF0000}[/ccontrol] {FFFFFF}to change keys/settings.", 10944256)
-    sampRegisterChatCommand("ccrversion", function()
-            lua_thread.create(function()
-                sampAddChatMessage(string.format("{DFBD68}[%s]{FFFFFF} Current version: {00b7ff}[%s]{FFFFFF}. Click on 'Update Script' in menu to check for updates.", script.this.name, script_version_text), 10944256)
-		end)
-	end)
-    sampRegisterChatCommand("ccontrol", function() _menu = not _menu windno = 0 end)
+    sampRegisterChatCommand("ccrforceupdate", function() update_script(false, false, true, false) end)
+    sampRegisterChatCommand("ccontrol", function() _menu = not _menu windno = 3 end)
     sampRegisterChatCommand("setspeed", cspeed)
     applyfont()
     while true do
@@ -200,7 +209,7 @@ function main()
                     setGameKeyState(gkeys.vehicle.BRAKE, 80)
                 end
                 if not (sampIsChatInputActive() or sampIsDialogActive() or isSampfuncsConsoleActive() or isPauseMenuActive()) then
-                    if isKeyDown(87) or isKeyDown(83) or s1 < 1 then
+                    if isKeyDown(87) or isKeyDown(83) or s1 < 2/3 then
                         enable = not enable
                     end
                 end
@@ -288,39 +297,58 @@ function applyfont()
     font = renderCreateFont(ccontrol.design.font, ccontrol.design.fontsize, 9)
 end
 
-function update_script(noupdatecheck)
-	local update_text = https.request(update_url)
-	if update_text ~= nil then
-		update_version = update_text:match("version: (.+)")
-		if update_version ~= nil then
-			if tonumber(update_version) > script_version then
-				sampAddChatMessage(string.format("{DFBD68}[%s]{FFFFFF} New version found! The update is in progress.", script.this.name), 10944256)
-				downloadUrlToFile(script_url, script_path, function(id, status)
-					if status == dlstatus.STATUS_ENDDOWNLOADDATA then
-						sampAddChatMessage(string.format("{DFBD68}[%s]{FFFFFF} The update was successful!", script.this.name), 10944256)
-						lua_thread.create(function()
-							wait(500) 
-							thisScript():reload()
-						end)
-					end
-				end)
-			else
-				if noupdatecheck then
-					sampAddChatMessage(string.format("{DFBD68}[%s]{FFFFFF} No new version found.", script.this.name), 10944256)
-				end
-			end
-		end
-	end
+function update_script(norupdate, noupdatecheck, forceupdate, updaterem)
+    if updaterem then
+        local update_text = https.request(update_url)
+	    if update_text ~= nil then
+		    update_version = update_text:match("version: (.+)")
+		    if update_version ~= nil then
+			    if tonumber(update_version) > script_version then
+				    sampAddChatMessage(string.format("{DFBD68}[%s]{FFFFFF} New version found! Current Version: [{00b7ff}%s{FFFFFF}] Latest Version: [{00b7ff}%s{FFFFFF}]", script.this.name, script_version_text, update_version), 10944256)
+                end
+            end
+        end
+    end
+    if forceupdate then
+        downloadUrlToFile(script_url, script_path, function(id, status)
+            if status == dlstatus.STATUS_ENDDOWNLOADDATA then
+                sampAddChatMessage(string.format("{DFBD68}[%s]{FFFFFF} The update was successful!", script.this.name), 10944256)
+                lua_thread.create(function()
+                    wait(500) 
+                    thisScript():reload()
+                end)
+            end
+        end)
+    end
+    if norupdate then
+        local update_text = https.request(update_url)
+        if update_text ~= nil then
+            update_version = update_text:match("version: (.+)")
+            if update_version ~= nil then
+                if tonumber(update_version) > script_version then
+                    sampAddChatMessage(string.format("{DFBD68}[%s]{FFFFFF} New version found! The update is in progress.", script.this.name), 10944256)
+                    downloadUrlToFile(script_url, script_path, function(id, status)
+                        if status == dlstatus.STATUS_ENDDOWNLOADDATA then
+                            sampAddChatMessage(string.format("{DFBD68}[%s]{FFFFFF} The update was successful!", script.this.name), 10944256)
+                            lua_thread.create(function()
+                                wait(500) 
+                                thisScript():reload()
+                            end)
+                        end
+                    end)
+                else
+                    if noupdatecheck then
+                        sampAddChatMessage(string.format("{DFBD68}[%s]{FFFFFF} No new version found.", script.this.name), 10944256)
+                    end
+                end
+            end
+        end
+    end
 end
 
 function SaveIni()
     ccontrol.boxcolor.r, ccontrol.boxcolor.g, ccontrol.boxcolor.b, ccontrol.boxcolor.a = preset.boxcolor[0], preset.boxcolor[1], preset.boxcolor[2], preset.boxcolor[3]
     inicfg.save(ccontrol, 'cruise_control.ini')
-end
-
-function setGameKeyUpDown(key, value)
-	setGameKeyState(key, value)
-	setGameKeyState(key, 0)
 end
 
 function join_argb(a, r, g, b)
