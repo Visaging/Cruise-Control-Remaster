@@ -1,8 +1,8 @@
 script_name("Cruise Control Remaster")
 script_author("Visage A.K.A. Ishaan Dunne")
 
-local script_version = 6.81
-local script_version_text = '6.81'
+local script_version = 6.82
+local script_version_text = '6.82'
 
 require "moonloader"
 require "sampfuncs"
@@ -52,6 +52,9 @@ local logoimg = nil
 imgui.OnInitialize(function()
 	imgui.GetIO().IniFilename = nil
     style()
+    local glyph_ranges = imgui.GetIO().Fonts:GetGlyphRangesCyrillic()
+	imgui.GetIO().Fonts:Clear()
+    imgui.GetIO().Fonts:AddFontFromFileTTF(getFolderPath(0x14) .. '\\'.."calibrib.ttf", 13, nil, glyph_ranges)
     logoimg = imgui.CreateTextureFromFileInMemory(logo, #logo)
 end)
 
@@ -61,7 +64,6 @@ function()
     imgui.SetNextWindowPos(imgui.ImVec2(width / 2, height / 2), imgui.Cond.Always, imgui.ImVec2(0.5, 0.5))
     imgui.SetNextWindowSize(imgui.ImVec2(500, 330), imgui.Cond.FirstUseEver)
     imgui.BeginCustomTitle(u8"Cruise Control Remaster", 30, main_win, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoMove + imgui.WindowFlags.NoScrollbar)
-
         imgui.BeginChild("##1", imgui.ImVec2(130, 100), true)
             imgui.SetCursorPos(imgui.ImVec2(27, 5))
             imgui.Text("Main Settings")
