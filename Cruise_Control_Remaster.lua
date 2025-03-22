@@ -1,15 +1,14 @@
 script_name("Cruise Control Remaster")
 script_author("Visage A.K.A. Ishaan Dunne")
 
-local script_version = 6.82
-local script_version_text = '6.82'
+local script_version = 6.83
+local script_version_text = '6.83'
 
 require "moonloader"
 require "sampfuncs"
 local https = require 'ssl.https'
 local dlstatus = require('moonloader').download_status
 local script_path = thisScript().path
-local script_url = "https://raw.githubusercontent.com/Visaging/Cruise-Control-Remaster/main/Cruise_Control_Remaster.lua"
 local update_url = "https://raw.githubusercontent.com/Visaging/Cruise-Control-Remaster/main/Cruise_Control_Remaster.txt"
 local imgui, ffi = require 'mimgui', require 'ffi'
 local new, str, sizeof = imgui.new, ffi.string, ffi.sizeof
@@ -41,7 +40,6 @@ local ccontrol = inicfg.load({
         togoverlay = true,
         nhtoggle = false,
         autosave = true,
-        autoupdate = true,
     },
     boxcolor = {r = 0.55, g = 0.21, b = 1, a = 1},
 }, 'cruise_control.ini')
@@ -62,7 +60,7 @@ imgui.OnFrame(function() return _menu and not isGamePaused() end,
 function()
     width, height = getScreenResolution()
     imgui.SetNextWindowPos(imgui.ImVec2(width / 2, height / 2), imgui.Cond.Always, imgui.ImVec2(0.5, 0.5))
-    imgui.SetNextWindowSize(imgui.ImVec2(500, 330), imgui.Cond.FirstUseEver)
+    imgui.SetNextWindowSize(imgui.ImVec2(500, 300), imgui.Cond.FirstUseEver)
     imgui.BeginCustomTitle(u8"Cruise Control Remaster", 30, main_win, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoMove + imgui.WindowFlags.NoScrollbar)
         imgui.BeginChild("##1", imgui.ImVec2(130, 100), true)
             imgui.SetCursorPos(imgui.ImVec2(27, 5))
@@ -74,20 +72,19 @@ function()
 
         imgui.SetCursorPos(imgui.ImVec2(5, 140))
 
-        imgui.BeginChild("##2", imgui.ImVec2(130, 185), true)
+        imgui.BeginChild("##2", imgui.ImVec2(130, 155), true)
             imgui.SetCursorPos(imgui.ImVec2(27, 5))
             imgui.Text("Script Settings")
             imgui.Separator()
-            if imgui.Button(u8'Update Script', imgui.ImVec2(120, 20)) then update_script(true, true, false, false) end
-            if imgui.Button(u8'Save Config', imgui.ImVec2(120, 20)) then SaveIni() sampAddChatMessage(string.format("{DFBD68}[%s]{FFFFFF} Config Saved!", script.this.name), -1) end
+            if imgui.Button(u8'Check For Updates', imgui.ImVec2(120, 20)) then update_check() end imgui.Spacing()
+            if imgui.Button(u8'Save Config', imgui.ImVec2(120, 20)) then SaveIni() sampAddChatMessage(string.format("{DFBD68}[%s]{FFFFFF} Config Saved!", script.this.name), -1) end imgui.Spacing()
             if imgui.Button(u8'Reload Script', imgui.ImVec2(120, 20)) then SaveIni() thisScript():reload() end imgui.Spacing()
-            if imgui.Checkbox("Auto Update", new.bool(ccontrol.design.autoupdate)) then ccontrol.design.autoupdate = not ccontrol.design.autoupdate end imgui.Spacing()
             if imgui.Checkbox("Auto Save", new.bool(ccontrol.design.autosave)) then ccontrol.design.autosave = not ccontrol.design.autosave end
         imgui.EndChild()
 
         imgui.SetCursorPos(imgui.ImVec2(140, 35))
 
-        imgui.BeginChild("##3", imgui.ImVec2(355, 290), true)
+        imgui.BeginChild("##3", imgui.ImVec2(355, 260), true)
             if windno == 0 then
                 imgui.Text("Change Cruise Key: ") imgui.SameLine() imgui.PushItemWidth(100)
                 if imgui.Button(ctogkey and 'Press any key' or vk.id_to_name(ccontrol.settings.togglekey)) then ctogkey = true lua_thread.create(function() while ctogkey do wait(0) local keydown, result = getDownKeys() if result then ccontrol.settings.togglekey = keydown ctogkey = false end end end) end imgui.Spacing()
@@ -124,7 +121,7 @@ function()
                 if imgui.Checkbox(u8("Box Around the overlay"), new.bool(ccontrol.design.boxtoggle)) then ccontrol.design.boxtoggle = not ccontrol.design.boxtoggle end
                 if ccontrol.design.boxtoggle then imgui.Text("Box Color: ") imgui.SameLine() imgui.ColorEdit4('##presettings.dc', preset.boxcolor, imgui.ColorEditFlags.NoInputs + imgui.ColorEditFlags.AlphaBar) end
             elseif windno == 3 then
-                imgui.Image(logoimg, imgui.ImVec2(345, 280))
+                imgui.Image(logoimg, imgui.ImVec2(345, 250))
             end
         imgui.EndChild()
     imgui.End()
@@ -133,9 +130,7 @@ end)
 function main()
     if not isSampfuncsLoaded() or not isSampLoaded() then return end
     while not isSampAvailable() do wait(100) end
-    if ccontrol.design.autoupdate then update_script(true, false, false, false) else update_script(false, false, false, true) end
     sampAddChatMessage("{DFBD68}Cruise Control Remaster by {FFFF00}Visage. {FF0000}[/ccontrol] {FFFFFF}to change keys/settings.", 10944256)
-    sampRegisterChatCommand("ccrforceupdate", function() update_script(false, false, true, false) end)
     sampRegisterChatCommand("ccontrol", function() _menu = not _menu windno = 3 end)
     sampRegisterChatCommand("setspeed", cspeed)
     applyfont()
@@ -287,50 +282,17 @@ function applyfont()
     font = renderCreateFont(ccontrol.design.font, ccontrol.design.fontsize, 9)
 end
 
-function update_script(norupdate, noupdatecheck, forceupdate, updaterem)
-    if updaterem then
-        local update_text = https.request(update_url)
-	    if update_text ~= nil then
-		    update_version = update_text:match("version: (.+)")
-		    if update_version ~= nil then
-			    if tonumber(update_version) > script_version then
-				    sampAddChatMessage(string.format("{DFBD68}[%s]{FFFFFF} New version found! Current Version: [{00b7ff}%s{FFFFFF}] Latest Version: [{00b7ff}%s{FFFFFF}]", script.this.name, script_version_text, update_version), 10944256)
-                end
-            end
-        end
-    end
-    if forceupdate then
-        downloadUrlToFile(script_url, script_path, function(id, status)
-            if status == dlstatus.STATUS_ENDDOWNLOADDATA then
-                sampAddChatMessage(string.format("{DFBD68}[%s]{FFFFFF} The update was successful!", script.this.name), 10944256)
-                lua_thread.create(function()
-                    wait(500) 
-                    thisScript():reload()
-                end)
-            end
-        end)
-    end
-    if norupdate then
-        local update_text = https.request(update_url)
-        if update_text ~= nil then
-            update_version = update_text:match("version: (.+)")
-            if update_version ~= nil then
-                if tonumber(update_version) > script_version then
-                    sampAddChatMessage(string.format("{DFBD68}[%s]{FFFFFF} New version found! The update is in progress.", script.this.name), 10944256)
-                    downloadUrlToFile(script_url, script_path, function(id, status)
-                        if status == dlstatus.STATUS_ENDDOWNLOADDATA then
-                            sampAddChatMessage(string.format("{DFBD68}[%s]{FFFFFF} The update was successful!", script.this.name), 10944256)
-                            lua_thread.create(function()
-                                wait(500) 
-                                thisScript():reload()
-                            end)
-                        end
-                    end)
-                else
-                    if noupdatecheck then
-                        sampAddChatMessage(string.format("{DFBD68}[%s]{FFFFFF} No new version found.", script.this.name), 10944256)
-                    end
-                end
+function update_check()
+    local update_text = https.request(update_url)
+    if update_text ~= nil then
+        update_version = update_text:match("version: (.+)")
+        if update_version ~= nil then
+            if tonumber(update_version) > script_version then
+                sampAddChatMessage(string.format("{DFBD68}[%s]{FFFFFF} New version found! Current Version: [{00b7ff}%s{FFFFFF}] Latest Version: [{00b7ff}%s{FFFFFF}]", script.this.name, script_version_text, update_version), -1)
+                setClipboardText("https://github.com/Visaging/Cruise-Control-Remaster")
+                sampAddChatMessage(string.format("{DFBD68}[%s]{FFFFFF} Link to the updated script has been copied to your clipbaord.", script.this.name), -1)
+            elseif tonumber(update_version) == script_version then
+                sampAddChatMessage(string.format("{DFBD68}[%s]{FFFFFF} You are on the latest version! Current Version: [{00b7ff}%s{FFFFFF}]", script.this.name, script_version_text), -1)
             end
         end
     end
